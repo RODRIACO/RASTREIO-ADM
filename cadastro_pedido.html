@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Rodriaço — Gestão de Pedidos</title>
+  <meta name="theme-color" content="#e8620a"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Rodriaço"/>
+  <link rel="manifest" href="/RASTREIO-ADM/manifest.json"/>
+  <link rel="apple-touch-icon" href="/RASTREIO-ADM/icon-192.png"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#1a1a1a;min-height:100vh;color:#fff;}
+    .topbar{background:#111;padding:18px 32px;display:flex;align-items:center;justify-content:center;border-bottom:3px solid #e8620a;}
+    .brand{font-size:22px;font-weight:900;color:#e8620a;text-transform:uppercase;letter-spacing:.04em;text-align:center;}
+    .sub{font-size:11px;color:#666;letter-spacing:.12em;text-transform:uppercase;margin-top:2px;text-align:center;}
+
+    .tabs{display:flex;background:#111;border-bottom:1px solid #2a2a2a;}
+    .tab{flex:1;padding:13px;text-align:center;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;color:#555;border-bottom:3px solid transparent;transition:all .2s;}
+    .tab.active{color:#e8620a;border-bottom-color:#e8620a;}
+    .tab:hover{color:#fff;}
+
+    .container{max-width:800px;margin:28px auto;padding:0 20px 60px;}
+
+    /* Busca */
+    .busca-wrap{display:flex;gap:0;margin-bottom:8px;}
+    .busca-wrap input{flex:1;padding:12px 16px;background:#1e1e1e;border:1.5px solid #333;border-right:none;border-radius:4px 0 0 4px;font-size:14px;color:#fff;outline:none;}
+    .busca-wrap input:focus{border-color:#e8620a;}
+    .busca-wrap button{padding:12px 22px;background:#e8620a;color:#fff;border:none;border-radius:0 4px 4px 0;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;}
+    .busca-wrap button:hover{background:#c9520a;}
+    .busca-hint{font-size:11px;color:#555;margin-bottom:20px;}
+
+    .section-label{font-size:9px;letter-spacing:.14em;color:#e8620a;text-transform:uppercase;margin-bottom:12px;margin-top:22px;display:flex;align-items:center;gap:8px;}
+    .section-label::after{content:'';flex:1;height:1px;background:#2a2a2a;}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+    .grid.g3{grid-template-columns:1fr 1fr 1fr;}
+    .grid.single{grid-template-columns:1fr;}
+    .field{display:flex;flex-direction:column;gap:5px;}
+    .field label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.08em;}
+    .field input,.field select,.field textarea{
+      background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;
+      padding:10px 12px;font-size:13px;color:#fff;outline:none;
+      transition:border-color .2s;font-family:Arial,sans-serif;
+    }
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:#e8620a;}
+    .field select option{background:#1e1e1e;}
+    .field textarea{resize:vertical;min-height:68px;}
+    .field input::placeholder,.field textarea::placeholder{color:#444;}
+
+    /* Status grid */
+    .status-grid{display:flex;flex-direction:column;gap:8px;}
+    .status-row{display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;padding:10px 14px;transition:border-color .2s;}
+    .status-row:hover{border-color:#333;}
+    .status-row.ativo{border-color:#e8620a;background:#1e1e1e;}
+    .status-check{width:18px;height:18px;accent-color:#e8620a;cursor:pointer;flex-shrink:0;}
+    .status-icon{font-size:16px;flex-shrink:0;}
+    .status-nome{flex:1;font-size:13px;font-weight:700;color:#aaa;}
+    .status-row.ativo .status-nome{color:#fff;}
+    .status-data{width:145px;flex-shrink:0;}
+    .status-data input{
+      width:100%;background:#111;border:1px solid #333;border-radius:3px;
+      padding:6px 9px;font-size:11px;color:#e8620a;outline:none;font-family:Arial,sans-serif;
+    }
+    .status-data input:focus{border-color:#e8620a;}
+    .status-data input:disabled{color:#444;border-color:#222;}
+
+    /* Upload */
+    .upload-area{
+      border:2px dashed #333;border-radius:6px;padding:24px;
+      text-align:center;cursor:pointer;transition:border-color .2s;
+      background:#1e1e1e;position:relative;margin-top:4px;
+    }
+    .upload-area:hover,.upload-area.drag{border-color:#e8620a;}
+    .upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+    .upload-icon{font-size:28px;margin-bottom:6px;}
+    .upload-text{font-size:12px;color:#666;}
+    .upload-text span{color:#e8620a;font-weight:700;}
+    .upload-name{margin-top:8px;font-size:12px;color:#e8620a;font-weight:700;display:none;}
+
+    .btn-salvar{
+      width:100%;margin-top:26px;padding:14px;
+      background:#e8620a;color:#fff;border:none;border-radius:4px;
+      font-size:14px;font-weight:700;cursor:pointer;
+      text-transform:uppercase;letter-spacing:.08em;transition:background .2s;
+    }
+    .btn-salvar:hover{background:#c9520a;}
+    .btn-salvar:disabled{background:#5a3010;cursor:not-allowed;}
+    .btn-limpar{
+      width:100%;margin-top:10px;padding:11px;
+      background:transparent;color:#555;border:1.5px solid #333;border-radius:4px;
+      font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;
+      transition:all .2s;
+    }
+    .btn-limpar:hover{border-color:#e8620a;color:#e8620a;}
+
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .toast{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      padding:13px 28px;border-radius:6px;font-size:13px;font-weight:700;
+      opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;
+      text-align:center;min-width:260px;
+    }
+    .toast.show{opacity:1;}
+    .toast.ok{background:#1a3a1a;color:#7af07a;border:1px solid #2a6a2a;}
+    .toast.err{background:#3a1a1a;color:#f07a7a;border:1px solid #6a2a2a;}
+    .toast.info{background:#1a1a3a;color:#7a9af0;border:1px solid #2a3a8a;}
+
+    .page{display:none;}
+    .page.active{display:block;}
+
+    /* Tabela */
+    .tabela-wrap{margin-top:14px;overflow-x:auto;border-radius:4px;border:1px solid #2a2a2a;}
+    .tabela-filtro{width:100%;padding:10px 13px;background:#1e1e1e;border:none;border-bottom:1px solid #2a2a2a;font-size:13px;color:#fff;outline:none;font-family:Arial,sans-serif;}
+    .tabela-filtro::placeholder{color:#444;}
+    .tabela-filtro:focus{border-bottom-color:#e8620a;}
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    thead tr{background:#111;}
+    thead th{padding:9px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#e8620a;border-bottom:1px solid #2a2a2a;white-space:nowrap;}
+    tbody tr{border-bottom:1px solid #222;cursor:pointer;transition:background .15s;}
+    tbody tr:hover{background:#252525;}
+    tbody tr.selecionada{background:#1e1e1e;border-left:3px solid #e8620a;}
+    tbody td{padding:9px 12px;color:#ccc;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+    tbody td.badge-cel span{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:2px;text-transform:uppercase;}
+    .b-entregue{background:#e8620a;color:#fff;}
+    .b-transito{background:#111;color:#e8620a;border:1px solid #e8620a;}
+    .b-producao,.b-default{background:#333;color:#aaa;}
+    .b-pronto{background:#1e3a5a;color:#7fb8f0;}
+    .b-agendado{background:#2a1a4a;color:#c8a0f8;}
+    .tabela-vazia{text-align:center;padding:28px;color:#444;font-size:13px;}
+    .tabela-info{font-size:10px;color:#555;padding:6px 13px;background:#111;border-top:1px solid #222;}
+    .btn-editar-linha{padding:4px 10px;background:transparent;color:#e8620a;border:1px solid #e8620a;border-radius:3px;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;}
+    .btn-editar-linha:hover{background:#e8620a;color:#fff;}
+
+    /* Login */
+    .login-screen{position:fixed;inset:0;background:#111;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+    .login-box{width:100%;max-width:340px;}
+    .login-logo{text-align:center;margin-bottom:32px;}
+    .login-logo .brand{font-size:28px;font-weight:900;color:#e8620a;text-transform:uppercase;letter-spacing:.04em;}
+    .login-logo .sub{font-size:11px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-top:4px;}
+    .login-field{margin-bottom:14px;}
+    .login-field label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px;}
+    .login-field input{width:100%;padding:13px 15px;background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;font-size:14px;color:#fff;outline:none;font-family:Arial,sans-serif;transition:border-color .2s;}
+    .login-field input:focus{border-color:#e8620a;}
+    .login-field input::placeholder{color:#444;}
+    .login-btn{width:100%;padding:14px;background:#e8620a;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;margin-top:8px;transition:background .2s;}
+    .login-btn:hover{background:#c9520a;}
+    .login-err{color:#f07a7a;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
+    .login-version{position:absolute;bottom:16px;font-size:10px;color:#333;letter-spacing:.08em;}
+
+    /* Banner de instalação */
+    .install-banner{
+      position:fixed;bottom:0;left:0;right:0;z-index:99999;
+      background:#111;border-top:2px solid #e8620a;
+      padding:14px 20px;display:flex;align-items:center;gap:14px;
+      box-shadow:0 -4px 20px rgba(0,0,0,.5);
+      transform:translateY(100%);transition:transform .4s ease;
+    }
+    .install-banner.show{transform:translateY(0);}
+    .install-banner-icon{font-size:36px;flex-shrink:0;}
+    .install-banner-text{flex:1;}
+    .install-banner-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;}
+    .install-banner-sub{font-size:11px;color:#888;}
+    .install-banner-sub span{color:#e8620a;}
+    .install-banner-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+    .btn-install{padding:9px 18px;background:#e8620a;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+    .btn-install:hover{background:#c9520a;}
+    .btn-install-close{padding:6px 18px;background:transparent;color:#555;border:1px solid #333;border-radius:4px;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+    .btn-install-close:hover{color:#e8620a;border-color:#e8620a;}
+
+    @media(max-width:600px){
+      .grid,.grid.g3{grid-template-columns:1fr;}
+      .status-data{width:130px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">Rodriaço ✦ Sodexo</div>
+      <div class="sub">Gestão de Pedidos</div>
+    </div>
+    <div class="login-field">
+      <label>Usuário</label>
+      <input type="text" id="loginUser" placeholder="Digite seu usuário" onkeydown="if(event.key==='Enter')fazerLogin()"/>
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter')fazerLogin()"/>
+    </div>
+    <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+  <div class="login-version">v1.0 — Rodriaço + Sodexo</div>
+</div>
+
+<div id="appContent" style="display:none;">
+<div class="topbar">
+  <div>
+    <div class="brand">Rodriaço ✦ Sodexo</div>
+    <div class="sub">Gestão de Pedidos</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="trocarAba('novo')">➕ Novo Pedido</div>
+  <div class="tab" onclick="trocarAba('editar')">✏️ Editar Pedido</div>
+</div>
+
+<!-- ==================== NOVO PEDIDO ==================== -->
+<div class="page active" id="pageNovo">
+<div class="container">
+
+  <div class="section-label">Identificação</div>
+  <div class="grid">
+    <div class="field"><label>Número do Pedido *</label><input type="text" id="n_numeroPedido" placeholder="Ex: 31756"/></div>
+    <div class="field"><label>Cliente *</label><input type="text" id="n_cliente" placeholder="Ex: SDX ORIGEM"/></div>
+  </div>
+  <div class="grid single" style="margin-top:11px;">
+    <div class="field"><label>Descrição</label><input type="text" id="n_descricao" placeholder="Ex: BALCÕES"/></div>
+  </div>
+
+  <div class="section-label">Etapas do Pedido</div>
+  <div class="status-grid" id="n_statusGrid"></div>
+
+  <div class="section-label">Entrega</div>
+  <div class="grid">
+    <div class="field"><label>Previsão de Entrega</label><input type="text" id="n_previsao" placeholder="Ex: 20/04"/></div>
+    <div class="field"><label>Localização Atual</label><input type="text" id="n_localizacao" placeholder="Ex: São Paulo"/></div>
+    <div class="field"><label>Recebido Por</label><input type="text" id="n_recebidoPor" placeholder="Ex: Natalia"/></div>
+  </div>
+
+  <div class="section-label">Transportador</div>
+  <div class="grid g3">
+    <div class="field"><label>Transportadora</label><input type="text" id="n_transportadora" placeholder="Ex: Sidnei"/></div>
+    <div class="field"><label>Motorista</label><input type="text" id="n_motorista" placeholder="Ex: Fábio"/></div>
+    <div class="field"><label>Telefone</label><input type="text" id="n_telefone" placeholder="Ex: 41 3954-1528"/></div>
+  </div>
+
+  <div class="section-label">Nota Fiscal</div>
+  <div class="grid">
+    <div class="field"><label>Número da NF</label><input type="text" id="n_notaFiscal" placeholder="Ex: 50416"/></div>
+  </div>
+  <div class="upload-area" id="n_uploadArea">
+    <input type="file" id="n_pdfInput" accept=".pdf" onchange="selecionarPDF(this,'n')"/>
+    <div class="upload-icon">📄</div>
+    <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
+    <div class="upload-name" id="n_uploadName"></div>
+  </div>
+
+  <div class="section-label">Observações</div>
+  <div class="field"><textarea id="n_observacao" placeholder="Observações adicionais..."></textarea></div>
+
+  <button class="btn-salvar" id="n_btnSalvar" onclick="salvarNovo()">💾 Salvar Pedido</button>
+  <button class="btn-limpar" onclick="limparNovo()">🗑 Limpar Formulário</button>
+</div>
+</div>
+
+<!-- ==================== EDITAR PEDIDO ==================== -->
+<div class="page" id="pageEditar">
+<div class="container">
+
+  <div class="section-label">Buscar Pedido</div>
+  <div class="busca-wrap">
+    <input type="text" id="e_busca" placeholder="Número do Pedido ou Número da NF..." onkeydown="if(event.key==='Enter')carregarPedido()"/>
+    <button onclick="carregarPedido()">🔍 Carregar</button>
+  </div>
+  <div class="busca-hint">Digite o número do pedido ou da nota fiscal e clique em Carregar</div>
+
+  <div id="e_form" style="display:none;">
+    <div class="section-label">Identificação</div>
+    <div class="grid">
+      <div class="field"><label>Número do Pedido</label><input type="text" id="e_numeroPedido"/></div>
+      <div class="field"><label>Cliente</label><input type="text" id="e_cliente"/></div>
+    </div>
+    <div class="grid single" style="margin-top:11px;">
+      <div class="field"><label>Descrição</label><input type="text" id="e_descricao"/></div>
+    </div>
+
+    <div class="section-label">Etapas do Pedido</div>
+    <div class="status-grid" id="e_statusGrid"></div>
+
+    <div class="section-label">Entrega</div>
+    <div class="grid">
+      <div class="field"><label>Previsão de Entrega</label><input type="text" id="e_previsao"/></div>
+      <div class="field"><label>Localização Atual</label><input type="text" id="e_localizacao"/></div>
+      <div class="field"><label>Recebido Por</label><input type="text" id="e_recebidoPor"/></div>
+    </div>
+
+    <div class="section-label">Transportador</div>
+    <div class="grid g3">
+      <div class="field"><label>Transportadora</label><input type="text" id="e_transportadora"/></div>
+      <div class="field"><label>Motorista</label><input type="text" id="e_motorista"/></div>
+      <div class="field"><label>Telefone</label><input type="text" id="e_telefone"/></div>
+    </div>
+
+    <div class="section-label">Nota Fiscal</div>
+    <div class="grid">
+      <div class="field"><label>Número da NF</label><input type="text" id="e_notaFiscal"/></div>
+    </div>
+    <div class="upload-area" id="e_uploadArea">
+      <input type="file" id="e_pdfInput" accept=".pdf" onchange="selecionarPDF(this,'e')"/>
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">Substituir PDF — <span>clique para selecionar</span></div>
+      <div class="upload-name" id="e_uploadName"></div>
+    </div>
+
+    <div class="section-label">Observações</div>
+    <div class="field"><textarea id="e_observacao"></textarea></div>
+
+    <button class="btn-salvar" id="e_btnSalvar" onclick="salvarEdicao()">💾 Salvar Alterações</button>
+    <button class="btn-limpar" onclick="limparEdicao()">✖ Cancelar</button>
+  </div>
+
+  <!-- TABELA COMPLETA -->
+  <div id="e_tabelaWrap" style="display:none;">
+    <div class="section-label" style="margin-top:28px;">Todos os Pedidos</div>
+    <div class="tabela-wrap">
+      <input class="tabela-filtro" id="e_filtro" placeholder="🔍 Filtrar por qualquer campo..." oninput="filtrarTabela()"/>
+      <table id="e_tabela">
+        <thead>
+          <tr>
+            <th>Nº Pedido</th>
+            <th>Cliente</th>
+            <th>Descrição</th>
+            <th>Status</th>
+            <th>Previsão</th>
+            <th>NF</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="e_tabelaBody"></tbody>
+      </table>
+      <div class="tabela-info" id="e_tabelaInfo"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Banner de instalação -->
+<div class="install-banner" id="installBanner">
+  <div class="install-banner-icon">📱</div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">Instalar Rodriaço</div>
+    <div class="install-banner-sub" id="installSub">Adicione à sua tela inicial</div>
+  </div>
+  <div class="install-banner-btns">
+    <button class="btn-install" id="btnInstall">Instalar</button>
+    <button class="btn-install-close" onclick="fecharBanner()">Agora não</button>
+  </div>
+</div>
+</div><!-- /appContent -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdIvso4Pvx9xcF5nGzKvUrZfuQgBgLqdOkazDVdJ73DCDgLApl35niDTgdMxOwOsbk/exec';
+
+const ETAPAS = [
+  {key:'producao',    icon:'⚙️', nome:'Processo de Produção'},
+  {key:'pronto',      icon:'📦', nome:'Pedido Pronto'},
+  {key:'agendado',    icon:'📅', nome:'Agendamento de Entrega'},
+  {key:'em transito', icon:'🚚', nome:'Saída em Rota'},
+  {key:'entregue',    icon:'✅', nome:'Entregue'},
+];
+
+let pdfBase64 = {n:'', e:''};
+let pdfNome   = {n:'', e:''};
+let linhaEdicao = -1;
+
+// ── Abas ─────────────────────────────────────────────
+let todosOsPedidos = [];
+
+function trocarAba(aba) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (aba==='novo'&&i===0)||(aba==='editar'&&i===1)));
+  document.getElementById('pageNovo').classList.toggle('active', aba==='novo');
+  document.getElementById('pageEditar').classList.toggle('active', aba==='editar');
+  if (aba === 'editar') carregarTabela();
+}
+
+// ── Monta grade de status ─────────────────────────────
+function montarStatusGrid(containerId, prefix, dadosAtivos) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  ETAPAS.forEach(et => {
+    const ativo = dadosAtivos && dadosAtivos[et.key];
+    const dataVal = dadosAtivos && dadosAtivos[et.key+'_data'] ? dadosAtivos[et.key+'_data'] : '';
+    const row = document.createElement('div');
+    row.className = 'status-row' + (ativo ? ' ativo' : '');
+    row.id = `${prefix}_row_${et.key}`;
+    row.innerHTML = `
+      <input type="checkbox" class="status-check" id="${prefix}_chk_${et.key}"
+        ${ativo ? 'checked' : ''}
+        onchange="toggleStatus('${prefix}','${et.key}',this.checked)"/>
+      <span class="status-icon">${et.icon}</span>
+      <span class="status-nome">${et.nome}</span>
+      <div class="status-data">
+        <input type="text" id="${prefix}_data_${et.key}"
+          placeholder="DD/MM HH:MM"
+          value="${dataVal}"
+          ${!ativo ? 'disabled' : ''}/>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+function toggleStatus(prefix, key, checked) {
+  const row = document.getElementById(`${prefix}_row_${key}`);
+  const dataInput = document.getElementById(`${prefix}_data_${key}`);
+  row.classList.toggle('ativo', checked);
+  dataInput.disabled = !checked;
+  if (checked && !dataInput.value) {
+    dataInput.value = agora();
+  }
+  if (!checked) {
+    dataInput.value = '';
+  }
+}
+
+function agora() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// Inicializa grids
+montarStatusGrid('n_statusGrid', 'n', null);
+montarStatusGrid('e_statusGrid', 'e', null);
+
+// ── PDF ───────────────────────────────────────────────
+function selecionarPDF(input, prefix) {
+  const file = input.files[0];
+  if (!file) return;
+  pdfNome[prefix] = file.name;
+  const nameEl = document.getElementById(prefix + '_uploadName');
+  nameEl.textContent = '✓ ' + file.name;
+  nameEl.style.display = 'block';
+  const match = file.name.match(/(\d{4,})/);
+  const nfInput = document.getElementById(prefix + '_notaFiscal');
+  if (match && !nfInput.value) nfInput.value = match[1];
+  const reader = new FileReader();
+  reader.onload = ev => { pdfBase64[prefix] = ev.target.result.split(',')[1]; };
+  reader.readAsDataURL(file);
+}
+
+['n','e'].forEach(prefix => {
+  const area = document.getElementById(prefix + '_uploadArea');
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag'); });
+  area.addEventListener('dragleave', () => area.classList.remove('drag'));
+  area.addEventListener('drop', e => {
+    e.preventDefault(); area.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      selecionarPDF({files:[file]}, prefix);
+    }
+  });
+});
+
+// ── Coleta dados de status ────────────────────────────
+function coletarStatus(prefix) {
+  const result = {};
+  ETAPAS.forEach(et => {
+    const chk = document.getElementById(`${prefix}_chk_${et.key}`);
+    const dat = document.getElementById(`${prefix}_data_${et.key}`);
+    if (chk.checked) {
+      result[et.key] = true;
+      result[et.key + '_data'] = dat.value;
+    }
+  });
+  return result;
+}
+
+// ── Gera histórico a partir dos status ───────────────
+function gerarHistorico(statusData) {
+  const ordem = ['entregue','em transito','agendado','pronto','producao'];
+  const linhas = [];
+  ordem.forEach(key => {
+    if (statusData[key] && statusData[key+'_data']) {
+      const nomes = {
+        'producao':'Produção iniciada',
+        'pronto':'Pedido pronto para embarque',
+        'agendado':'Agendamento de entrega',
+        'em transito':'Saída em rota',
+        'entregue':'Entregue ao cliente',
+      };
+      linhas.push(`${statusData[key+'_data']} - ${nomes[key]}`);
+    }
+  });
+  return linhas.join(' ');
+}
+
+// ── Status atual (último marcado) ────────────────────
+function statusAtual(statusData) {
+  const ordem = ['entregue','em transito','agendado','pronto','producao'];
+  for (const key of ordem) {
+    if (statusData[key]) return key.toUpperCase();
+  }
+  return '';
+}
+
+// ── g() helper ───────────────────────────────────────
+function g(id) { return document.getElementById(id).value.trim(); }
+
+// ── SALVAR NOVO ───────────────────────────────────────
+async function salvarNovo() {
+  if (!g('n_numeroPedido')) return showToast('Preencha o Número do Pedido','err');
+  if (!g('n_cliente'))       return showToast('Preencha o Cliente','err');
+  const statusData = coletarStatus('n');
+  if (!Object.keys(statusData).length) return showToast('Selecione ao menos uma etapa','err');
+
+  const btn = document.getElementById('n_btnSalvar');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+
+  const payload = {
+    acao: 'cadastrar',
+    numeroPedido:   g('n_numeroPedido'),
+    cliente:        g('n_cliente'),
+    descricao:      g('n_descricao'),
+    statusAtual:    statusAtual(statusData),
+    statusData:     statusData,
+    historico:      gerarHistorico(statusData),
+    previsao:       g('n_previsao'),
+    localizacao:    g('n_localizacao'),
+    recebidoPor:    g('n_recebidoPor'),
+    transportadora: g('n_transportadora'),
+    motorista:      g('n_motorista'),
+    telefone:       g('n_telefone'),
+    notaFiscal:     g('n_notaFiscal'),
+    observacao:     g('n_observacao'),
+    pdfBase64:      pdfBase64.n,
+    pdfNome:        pdfNome.n,
+  };
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (data.ok) { showToast('✅ Pedido salvo com sucesso!','ok'); limparNovo(); }
+    else showToast('❌ ' + (data.erro || 'Erro ao salvar'),'err');
+  } catch(e) {
+    showToast('❌ Erro de conexão','err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '💾 Salvar Pedido';
+  }
+}
+
+// ── CARREGAR PEDIDO PARA EDIÇÃO ───────────────────────
+async function carregarTabela() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {redirect:'follow'});
+    const rows = await res.json();
+    if (rows.error) throw new Error(rows.error);
+    todosOsPedidos = rows;
+    renderTabela(rows);
+    document.getElementById('e_tabelaWrap').style.display = 'block';
+  } catch(err) {
+    showToast('❌ Erro ao carregar tabela: ' + err.message,'err');
+  }
+}
+
+async function carregarPedido() {
+  const busca = document.getElementById('e_busca').value.trim();
+
+  // Sem busca — só mostra/atualiza tabela
+  if (!busca) {
+    await carregarTabela();
+    return;
+  }
+
+  showToast('🔍 Buscando...','info');
+
+  try {
+    // Usa dados já carregados se disponíveis
+    let rows = todosOsPedidos;
+    if (!rows.length) {
+      const res = await fetch(APPS_SCRIPT_URL, {redirect:'follow'});
+      rows = await res.json();
+      if (rows.error) throw new Error(rows.error);
+      todosOsPedidos = rows;
+    }
+
+    const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const buscaN = n(busca);
+    const pedido = rows.find(r =>
+      n(r['numero do pedido']||'') === buscaN ||
+      n(r['nota fiscal']||'') === buscaN
+    );
+
+    // Filtra tabela com o termo buscado
+    const filtrados = rows.filter(r =>
+      Object.values(r).some(v => n(v).includes(buscaN))
+    );
+    renderTabela(filtrados);
+    document.getElementById('e_tabelaWrap').style.display = 'block';
+    document.getElementById('e_filtro').value = busca;
+
+    if (!pedido) return showToast('Pedido não encontrado — veja os resultados na tabela','info');
+
+    preencherFormEdicao(pedido, rows.indexOf(pedido) + 2);
+    document.getElementById('e_form').style.display = 'block';
+    showToast('✅ Pedido carregado!','ok');
+
+  } catch(err) {
+    showToast('❌ Erro: ' + err.message,'err');
+  }
+}
+
+function renderTabela(rows) {
+  const tbody = document.getElementById('e_tabelaBody');
+  const info  = document.getElementById('e_tabelaInfo');
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Nenhum pedido encontrado</td></tr>';
+    info.textContent = '';
+    return;
+  }
+
+  const statusClass = s => {
+    s = (s||'').toLowerCase();
+    if (s.includes('entregue')||s.includes('estregue')) return 'b-entregue';
+    if (s.includes('transito')||s.includes('rota')) return 'b-transito';
+    if (s.includes('pronto')) return 'b-pronto';
+    if (s.includes('agendado')) return 'b-agendado';
+    if (s.includes('producao')||s.includes('produção')) return 'b-producao';
+    return 'b-default';
+  };
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const np  = r['numero do pedido'] || '';
+    const cli = r['cliente'] || '';
+    const desc= r['descricao'] || '';
+    const st  = r['status'] || '';
+    const prev= r['previsao de entrega'] || '';
+    const nf  = r['nota fiscal'] || '';
+    const sc  = statusClass(st);
+    return `<tr onclick="selecionarLinha(${todosOsPedidos.indexOf(r)})">
+      <td>${np}</td>
+      <td>${cli}</td>
+      <td>${desc}</td>
+      <td class="badge-cel"><span class="${sc}">${st}</span></td>
+      <td>${prev}</td>
+      <td>${nf}</td>
+      <td><button class="btn-editar-linha" onclick="event.stopPropagation();selecionarLinha(${todosOsPedidos.indexOf(r)})">✏️ Editar</button></td>
+    </tr>`;
+  }).join('');
+
+  info.textContent = `${rows.length} pedido${rows.length!==1?'s':''} encontrado${rows.length!==1?'s':''}`;
+}
+
+function selecionarLinha(idx) {
+  const pedido = todosOsPedidos[idx];
+  if (!pedido) return;
+  preencherFormEdicao(pedido, idx + 2);
+  document.getElementById('e_form').style.display = 'block';
+  document.querySelectorAll('#e_tabelaBody tr').forEach((tr,i) => tr.classList.toggle('selecionada', i === todosOsPedidos.indexOf(pedido) - (todosOsPedidos.length - document.querySelectorAll('#e_tabelaBody tr').length)));
+  document.getElementById('e_form').scrollIntoView({behavior:'smooth'});
+  showToast('✅ Pedido carregado!','ok');
+}
+
+function filtrarTabela() {
+  const termo = document.getElementById('e_filtro').value.trim();
+  const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const termoN = n(termo);
+  const filtrados = termoN
+    ? todosOsPedidos.filter(r => Object.values(r).some(v => n(v).includes(termoN)))
+    : todosOsPedidos;
+  renderTabela(filtrados);
+}
+
+function preencherFormEdicao(p, linha) {
+  linhaEdicao = linha;
+  const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const pn = {};
+  Object.keys(p).forEach(k => { pn[n(k)] = p[k]; });
+
+  document.getElementById('e_numeroPedido').value  = pn['numero do pedido'] || '';
+  document.getElementById('e_cliente').value        = pn['cliente'] || '';
+  document.getElementById('e_descricao').value      = pn['descricao'] || '';
+  document.getElementById('e_previsao').value       = pn['previsao de entrega'] || '';
+  document.getElementById('e_localizacao').value    = pn['localizacao atual'] || '';
+  document.getElementById('e_recebidoPor').value    = pn['recebido por'] || '';
+  document.getElementById('e_transportadora').value = pn['transportadora'] || '';
+  document.getElementById('e_motorista').value      = pn['motorista'] || '';
+  document.getElementById('e_telefone').value       = pn['telefone'] || '';
+  document.getElementById('e_notaFiscal').value     = pn['nota fiscal'] || '';
+  document.getElementById('e_observacao').value     = pn['observacao'] || pn['observaçao'] || '';
+
+  // Reconstrói status a partir do histórico
+  const hist = pn['historico'] || '';
+  const dadosAtivos = {};
+  const mapaNomes = {
+    'producao iniciada':'producao','producao':'producao',
+    'pedido pronto':'pronto','pronto':'pronto',
+    'agendamento':'agendado','agendado':'agendado',
+    'saida em rota':'em transito','em transito':'em transito','transito':'em transito',
+    'entregue':'entregue','entregue ao cliente':'entregue',
+  };
+
+  if (hist) {
+    const partes = hist.split(/(?=\d{2}\/\d{2}(?:\s\d{2}:\d{2})?\s*-)/);
+    partes.forEach(item => {
+      item = item.trim();
+      if (!item) return;
+      const sep = item.indexOf(' - ');
+      if (sep === -1) return;
+      const data = item.substring(0, sep).trim();
+      const desc = item.substring(sep+3).trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      for (const [nome, key] of Object.entries(mapaNomes)) {
+        if (desc.includes(nome)) {
+          dadosAtivos[key] = true;
+          dadosAtivos[key+'_data'] = data;
+          break;
+        }
+      }
+    });
+  }
+
+  montarStatusGrid('e_statusGrid', 'e', dadosAtivos);
+}
+
+// ── SALVAR EDIÇÃO ─────────────────────────────────────
+async function salvarEdicao() {
+  if (linhaEdicao < 0) return showToast('Carregue um pedido primeiro','err');
+  const statusData = coletarStatus('e');
+
+  const btn = document.getElementById('e_btnSalvar');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+
+  const payload = {
+    acao: 'editar',
+    linha: linhaEdicao,
+    numeroPedido:   g('e_numeroPedido'),
+    cliente:        g('e_cliente'),
+    descricao:      g('e_descricao'),
+    statusAtual:    statusAtual(statusData),
+    statusData:     statusData,
+    historico:      gerarHistorico(statusData),
+    previsao:       g('e_previsao'),
+    localizacao:    g('e_localizacao'),
+    recebidoPor:    g('e_recebidoPor'),
+    transportadora: g('e_transportadora'),
+    motorista:      g('e_motorista'),
+    telefone:       g('e_telefone'),
+    notaFiscal:     g('e_notaFiscal'),
+    observacao:     g('e_observacao'),
+    pdfBase64:      pdfBase64.e,
+    pdfNome:        pdfNome.e,
+  };
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (data.ok) { showToast('✅ Pedido atualizado!','ok'); limparEdicao(); }
+    else showToast('❌ ' + (data.erro || 'Erro ao salvar'),'err');
+  } catch(e) {
+    showToast('❌ Erro de conexão','err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '💾 Salvar Alterações';
+  }
+}
+
+// ── Limpar ────────────────────────────────────────────
+function limparNovo() {
+  ['n_numeroPedido','n_cliente','n_descricao','n_previsao','n_localizacao',
+   'n_recebidoPor','n_transportadora','n_motorista','n_telefone','n_notaFiscal','n_observacao']
+    .forEach(id => document.getElementById(id).value = '');
+  pdfBase64.n = ''; pdfNome.n = '';
+  document.getElementById('n_pdfInput').value = '';
+  document.getElementById('n_uploadName').style.display = 'none';
+  montarStatusGrid('n_statusGrid', 'n', null);
+}
+
+function limparEdicao() {
+  document.getElementById('e_busca').value = '';
+  document.getElementById('e_form').style.display = 'none';
+  pdfBase64.e = ''; pdfNome.e = '';
+  linhaEdicao = -1;
+}
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + tipo + ' show';
+  setTimeout(() => t.className = 'toast ' + tipo, 3200);
+}
+
+// ── Login ─────────────────────────────────────────────
+const USUARIO = 'rodriaco';
+const SENHA   = 'qwe@123';
+const SESS_KEY = 'rodriaco_auth';
+
+function verificarLogin() {
+  if (sessionStorage.getItem(SESS_KEY) === '1') {
+    mostrarApp();
+  }
+}
+
+function fazerLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const s = document.getElementById('loginSenha').value;
+  if (u === USUARIO && s === SENHA) {
+    sessionStorage.setItem(SESS_KEY, '1');
+    mostrarApp();
+  } else {
+    const err = document.getElementById('loginErr');
+    err.textContent = 'Usuário ou senha incorretos';
+    document.getElementById('loginSenha').value = '';
+    setTimeout(() => err.textContent = '', 3000);
+  }
+}
+
+function mostrarApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appContent').style.display = 'block';
+}
+
+// Verifica login ao carregar
+verificarLogin();
+
+// ── PWA Service Worker ────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(
+      () => console.log('SW registrado'),
+      err => console.log('SW erro:', err)
+    );
+  });
+}
+
+// ── Banner de Instalação ──────────────────────────────
+let deferredPrompt = null;
+const BANNER_KEY = 'rodriaco_banner_fechado';
+
+// Android/Chrome — captura o evento de instalação
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // Só mostra se usuário não fechou antes
+  if (!sessionStorage.getItem(BANNER_KEY)) {
+    setTimeout(() => mostrarBanner('android'), 2000);
+  }
+});
+
+// iOS — detecta Safari no iPhone/iPad
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isEmStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+}
+
+function mostrarBanner(tipo) {
+  if (isEmStandaloneMode()) return; // já está instalado
+  
+  const banner = document.getElementById('installBanner');
+  const sub = document.getElementById('installSub');
+  const btnInstall = document.getElementById('btnInstall');
+  
+  if (tipo === 'ios') {
+    sub.innerHTML = 'Toque em <span>⎦ Compartilhar</span> → <span>"Adicionar à Tela"</span>';
+    btnInstall.style.display = 'none';
+  } else {
+    sub.textContent = 'Adicione à sua tela inicial com 1 toque';
+    btnInstall.style.display = '';
+  }
+  
+  banner.classList.add('show');
+}
+
+function fecharBanner() {
+  document.getElementById('installBanner').classList.remove('show');
+  sessionStorage.setItem(BANNER_KEY, '1');
+}
+
+document.getElementById('btnInstall').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    fecharBanner();
+  }
+  deferredPrompt = null;
+});
+
+// iOS — mostra banner após 2 segundos se não estiver instalado
+if (isIOS() && !isEmStandaloneMode() && !sessionStorage.getItem(BANNER_KEY)) {
+  setTimeout(() => mostrarBanner('ios'), 2000);
+}
+
+// App instalado com sucesso
+window.addEventListener('appinstalled', () => {
+  fecharBanner();
+  console.log('App instalado com sucesso!');
+});
+</script>
+</body>
+</html>
