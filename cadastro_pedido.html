@@ -172,6 +172,17 @@
     .btn-cancelar-modal{flex:1;padding:12px;background:transparent;color:#aaa;border:1.5px solid #333;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;}
     .btn-cancelar-modal:hover{border-color:#e8620a;color:#e8620a;}
 
+    /* Toggle biometria */
+    .bio-toggle-wrap{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:12px 14px;background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;}
+    .bio-toggle-label{display:flex;align-items:center;gap:8px;font-size:12px;color:#777;}
+    .bio-toggle-label span{font-size:16px;}
+    .toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggle-slider{position:absolute;inset:0;background:#333;border-radius:22px;cursor:pointer;transition:.3s;}
+    .toggle-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;}
+    .toggle input:checked + .toggle-slider{background:#e8620a;}
+    .toggle input:checked + .toggle-slider:before{transform:translateX(18px);}
+
     /* Biometria */
     .bio-banner{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:6px;padding:16px;margin-top:14px;text-align:center;display:none;}
     .bio-banner-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;}
@@ -227,17 +238,17 @@
       <input type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter')fazerLogin()"/>
     </div>
     <button class="login-btn" onclick="fazerLogin()">Entrar</button>
-    <button class="login-bio-btn" id="loginBioBtn" onclick="iniciarBiometria()">🔐 Usar Face ID / Digital</button>
-    <div class="login-err" id="loginErr"></div>
-    <div class="bio-banner" id="bioBanner">
-      <div class="bio-icon">🔐</div>
-      <div class="bio-banner-title">Ativar Face ID / Digital?</div>
-      <div class="bio-banner-sub">Nos próximos acessos, entre sem digitar senha.</div>
-      <div class="bio-btns">
-        <button class="btn-bio-sim" onclick="ativarBiometria()">Sim, ativar</button>
-        <button class="btn-bio-nao" onclick="recusarBiometria()">Agora não</button>
+    <div class="bio-toggle-wrap">
+      <div class="bio-toggle-label">
+        <span>🔐</span> Usar Digital / Face ID
       </div>
+      <label class="toggle">
+        <input type="checkbox" id="bioToggle" onchange="salvarToggleBio(this.checked)"/>
+        <span class="toggle-slider"></span>
+      </label>
     </div>
+    <button class="login-bio-btn" id="loginBioBtn" onclick="iniciarBiometria()">🔐 Entrar com Digital / Face ID</button>
+    <div class="login-err" id="loginErr"></div>
   </div>
   <div class="login-version">v1.0 — Rodriaço + Sodexo</div>
 </div>
@@ -897,6 +908,7 @@ async function confirmarExclusao() {
 
 // ── Biometria (WebAuthn) ───────────────────────────────
 const BIO_KEY = 'rodriaco_bio';
+const BIO_TOGGLE_KEY = 'rodriaco_bio_toggle';
 
 async function verificarSuporteBiometria() {
   try {
@@ -905,22 +917,18 @@ async function verificarSuporteBiometria() {
   } catch(e) { return false; }
 }
 
-async function iniciarBiometria() {
-  const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
-
-  // Já tem biometria registrada → faz login direto
-  if (bioData.ativado && bioData.id) {
-    await loginComBiometria();
-    return;
+function salvarToggleBio(ativado) {
+  localStorage.setItem(BIO_TOGGLE_KEY, ativado ? '1' : '0');
+  if (!ativado) {
+    // Desligar → remove biometria registrada
+    localStorage.removeItem(BIO_KEY);
+    document.getElementById('loginBioBtn').style.display = 'none';
   }
-
-  // Primeira vez → registra biometria
-  await ativarBiometria();
 }
 
 async function ativarBiometria() {
   try {
-    showToast('🔐 Aguarde...', 'info');
+    showToast('🔐 Registrando biometria...', 'info');
     const credencial = await navigator.credentials.create({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
@@ -948,21 +956,22 @@ async function ativarBiometria() {
         id: Array.from(new Uint8Array(credencial.rawId)),
         ativado: true
       }));
-      // Faz login após registrar
-      sessionStorage.setItem(SESS_KEY, '1');
-      mostrarApp();
-      showToast('🔐 Biometria ativada! Próximos acessos serão automáticos.', 'ok');
+      showToast('🔐 Biometria ativada! Próximos acessos use Digital / Face ID.', 'ok');
     }
   } catch(e) {
+    // Se falhar, desliga o toggle
+    document.getElementById('bioToggle').checked = false;
+    localStorage.setItem(BIO_TOGGLE_KEY, '0');
+    localStorage.removeItem(BIO_KEY);
     if (e.name === 'NotAllowedError') {
-      showToast('⚠️ Permissão negada. Use a senha.', 'err');
+      showToast('⚠️ Permissão negada. Biometria desativada.', 'err');
     } else {
-      showToast('⚠️ Biometria não disponível: ' + e.message, 'err');
+      showToast('⚠️ Biometria não disponível neste dispositivo.', 'err');
     }
   }
 }
 
-async function loginComBiometria() {
+async function iniciarBiometria() {
   try {
     const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
     if (!bioData.ativado || !bioData.id) return;
@@ -992,20 +1001,26 @@ async function loginComBiometria() {
 
 async function verificarBiometriaDisponivel() {
   const suporte = await verificarSuporteBiometria();
+  const toggle = document.getElementById('bioToggle');
   const btnBio = document.getElementById('loginBioBtn');
+  const toggleWrap = toggle.closest('.bio-toggle-wrap');
 
   if (!suporte) {
+    toggleWrap.style.display = 'none';
     btnBio.style.display = 'none';
     return;
   }
 
-  // Mostra botão sempre se suportado
-  btnBio.style.display = 'block';
+  // Restaura estado do toggle
+  const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
+  toggle.checked = toggleAtivo;
 
-  // Se já registrado, tenta login automático
+  // Mostra botão de login biométrico só se toggle ligado E já registrado
   const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
-  if (bioData.ativado && bioData.id) {
-    loginComBiometria();
+  if (toggleAtivo && bioData.ativado && bioData.id) {
+    btnBio.style.display = 'block';
+  } else {
+    btnBio.style.display = 'none';
   }
 }
 
@@ -1026,6 +1041,13 @@ async function fazerLogin() {
   if (u === USUARIO && s === SENHA) {
     sessionStorage.setItem(SESS_KEY, '1');
     mostrarApp();
+
+    // Se toggle de biometria estiver ligado e ainda não registrado, registra agora
+    const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
+    const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
+    if (toggleAtivo && (!bioData.ativado || !bioData.id)) {
+      setTimeout(() => ativarBiometria(), 800);
+    }
 
 
   } else {
