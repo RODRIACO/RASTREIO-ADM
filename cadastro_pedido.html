@@ -152,6 +152,37 @@
     .login-err{color:#f07a7a;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
     .login-version{position:absolute;bottom:16px;font-size:10px;color:#333;letter-spacing:.08em;}
 
+    /* Botão excluir */
+    .btn-excluir{width:100%;margin-top:8px;padding:11px;background:transparent;color:#c0392b;border:1.5px solid #c0392b;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;display:none;}
+    .btn-excluir:hover{background:#c0392b;color:#fff;}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9998;display:none;align-items:center;justify-content:center;padding:20px;}
+    .modal-overlay.show{display:flex;}
+    .modal-box{background:#1a1a1a;border:1.5px solid #2a2a2a;border-radius:6px;padding:28px;width:100%;max-width:380px;}
+    .modal-title{font-size:16px;font-weight:900;color:#fff;text-transform:uppercase;margin-bottom:6px;}
+    .modal-sub{font-size:13px;color:#777;margin-bottom:20px;line-height:1.5;}
+    .modal-sub span{color:#e8620a;font-weight:700;}
+    .modal-input{width:100%;padding:11px 13px;background:#111;border:1.5px solid #333;border-radius:4px;font-size:14px;color:#fff;outline:none;font-family:Arial,sans-serif;margin-bottom:16px;letter-spacing:.1em;}
+    .modal-input:focus{border-color:#c0392b;}
+    .modal-btns{display:flex;gap:10px;}
+    .btn-confirmar-excluir{flex:1;padding:12px;background:#c0392b;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;opacity:.5;pointer-events:none;}
+    .btn-confirmar-excluir.ativo{opacity:1;pointer-events:all;}
+    .btn-confirmar-excluir.ativo:hover{background:#a93226;}
+    .btn-cancelar-modal{flex:1;padding:12px;background:transparent;color:#aaa;border:1.5px solid #333;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;}
+    .btn-cancelar-modal:hover{border-color:#e8620a;color:#e8620a;}
+
+    /* Biometria */
+    .bio-banner{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:6px;padding:16px;margin-top:14px;text-align:center;display:none;}
+    .bio-banner-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;}
+    .bio-banner-sub{font-size:11px;color:#666;margin-bottom:12px;}
+    .bio-btns{display:flex;gap:8px;justify-content:center;}
+    .btn-bio-sim{padding:9px 20px;background:#e8620a;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;}
+    .btn-bio-nao{padding:9px 16px;background:transparent;color:#555;border:1px solid #333;border-radius:4px;font-size:12px;cursor:pointer;text-transform:uppercase;}
+    .bio-icon{font-size:36px;margin-bottom:8px;}
+    .login-bio-btn{width:100%;padding:14px;background:#1e1e1e;color:#e8620a;border:1.5px solid #e8620a;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;display:none;}
+    .login-bio-btn:hover{background:#e8620a;color:#fff;}
+
     /* Banner de instalação */
     .install-banner{
       position:fixed;bottom:0;left:0;right:0;z-index:99999;
@@ -196,7 +227,17 @@
       <input type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter')fazerLogin()"/>
     </div>
     <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <button class="login-bio-btn" id="loginBioBtn" onclick="loginComBiometria()">🔐 Usar Face ID / Digital</button>
     <div class="login-err" id="loginErr"></div>
+    <div class="bio-banner" id="bioBanner">
+      <div class="bio-icon">🔐</div>
+      <div class="bio-banner-title">Ativar Face ID / Digital?</div>
+      <div class="bio-banner-sub">Nos próximos acessos, entre sem digitar senha.</div>
+      <div class="bio-btns">
+        <button class="btn-bio-sim" onclick="ativarBiometria()">Sim, ativar</button>
+        <button class="btn-bio-nao" onclick="recusarBiometria()">Agora não</button>
+      </div>
+    </div>
   </div>
   <div class="login-version">v1.0 — Rodriaço + Sodexo</div>
 </div>
@@ -317,6 +358,7 @@
 
     <button class="btn-salvar" id="e_btnSalvar" onclick="salvarEdicao()">💾 Salvar Alterações</button>
     <button class="btn-limpar" onclick="limparEdicao()">✖ Cancelar</button>
+    <button class="btn-excluir" id="btnExcluir" onclick="abrirModalExcluir()">🗑 Excluir Pedido</button>
   </div>
 
   <!-- TABELA COMPLETA -->
@@ -343,6 +385,19 @@
   </div>
 
 </div>
+</div>
+
+<!-- Modal de Exclusão -->
+<div class="modal-overlay" id="modalExcluir">
+  <div class="modal-box">
+    <div class="modal-title">⚠️ Excluir Pedido</div>
+    <div class="modal-sub">Você está prestes a excluir o pedido <span id="modalPedidoInfo"></span>. Esta ação não pode ser desfeita.<br/><br/>Digite <span>EXCLUIR</span> para confirmar:</div>
+    <input class="modal-input" id="modalConfirmInput" placeholder="EXCLUIR" oninput="validarExclusao(this.value)"/>
+    <div class="modal-btns">
+      <button class="btn-cancelar-modal" onclick="fecharModalExcluir()">Cancelar</button>
+      <button class="btn-confirmar-excluir" id="btnConfirmarExcluir" onclick="confirmarExclusao()">🗑 Excluir</button>
+    </div>
+  </div>
 </div>
 
 <!-- Banner de instalação -->
@@ -675,6 +730,7 @@ function filtrarTabela() {
 
 function preencherFormEdicao(p, linha) {
   linhaEdicao = linha;
+  document.getElementById('btnExcluir').style.display = 'block';
   const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const pn = {};
   Object.keys(p).forEach(k => { pn[n(k)] = p[k]; });
@@ -780,6 +836,7 @@ function limparNovo() {
 function limparEdicao() {
   document.getElementById('e_busca').value = '';
   document.getElementById('e_form').style.display = 'none';
+  document.getElementById('btnExcluir').style.display = 'none';
   pdfBase64.e = ''; pdfNome.e = '';
   linhaEdicao = -1;
 }
@@ -790,6 +847,139 @@ function showToast(msg, tipo) {
   t.textContent = msg;
   t.className = 'toast ' + tipo + ' show';
   setTimeout(() => t.className = 'toast ' + tipo, 3200);
+}
+
+// ── Exclusão ──────────────────────────────────────────
+function abrirModalExcluir() {
+  const numPed = g('e_numeroPedido');
+  const cliente = g('e_cliente');
+  document.getElementById('modalPedidoInfo').textContent = `Nº ${numPed} — ${cliente}`;
+  document.getElementById('modalConfirmInput').value = '';
+  document.getElementById('btnConfirmarExcluir').classList.remove('ativo');
+  document.getElementById('modalExcluir').classList.add('show');
+}
+
+function fecharModalExcluir() {
+  document.getElementById('modalExcluir').classList.remove('show');
+}
+
+function validarExclusao(val) {
+  const btn = document.getElementById('btnConfirmarExcluir');
+  btn.classList.toggle('ativo', val.trim().toUpperCase() === 'EXCLUIR');
+}
+
+async function confirmarExclusao() {
+  if (linhaEdicao < 0) return;
+  fecharModalExcluir();
+
+  const btn = document.getElementById('e_btnSalvar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Excluindo...';
+
+  try {
+    const payload = { acao: 'excluir', linha: linhaEdicao };
+    const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅ Pedido excluído com sucesso!', 'ok');
+      limparEdicao();
+      await carregarTabela();
+    } else {
+      showToast('❌ ' + (data.erro || 'Erro ao excluir'), 'err');
+    }
+  } catch(e) {
+    showToast('❌ Erro de conexão', 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 Salvar Alterações';
+  }
+}
+
+// ── Biometria (WebAuthn) ───────────────────────────────
+const BIO_KEY = 'rodriaco_bio';
+
+async function verificarSuporteBiometria() {
+  return window.PublicKeyCredential &&
+    await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+}
+
+async function ativarBiometria() {
+  try {
+    const credencial = await navigator.credentials.create({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name: 'Rodriaço Gestão' },
+        user: {
+          id: new TextEncoder().encode(USUARIO),
+          name: USUARIO,
+          displayName: 'Rodriaço'
+        },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required'
+        },
+        timeout: 60000
+      }
+    });
+
+    if (credencial) {
+      localStorage.setItem(BIO_KEY, JSON.stringify({
+        id: Array.from(new Uint8Array(credencial.rawId)),
+        ativado: true
+      }));
+      document.getElementById('bioBanner').style.display = 'none';
+      showToast('🔐 Biometria ativada com sucesso!', 'ok');
+    }
+  } catch(e) {
+    document.getElementById('bioBanner').style.display = 'none';
+    showToast('⚠️ Biometria não disponível neste dispositivo', 'err');
+  }
+}
+
+function recusarBiometria() {
+  document.getElementById('bioBanner').style.display = 'none';
+  localStorage.setItem(BIO_KEY, JSON.stringify({ ativado: false }));
+}
+
+async function loginComBiometria() {
+  try {
+    const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
+    if (!bioData.ativado || !bioData.id) return;
+
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{
+          id: new Uint8Array(bioData.id),
+          type: 'public-key'
+        }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+
+    if (assertion) {
+      sessionStorage.setItem(SESS_KEY, '1');
+      mostrarApp();
+    }
+  } catch(e) {
+    showToast('⚠️ Tente novamente ou use a senha', 'err');
+  }
+}
+
+async function verificarBiometriaDisponivel() {
+  const suporte = await verificarSuporteBiometria().catch(() => false);
+  if (!suporte) return;
+
+  const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
+  const btnBio = document.getElementById('loginBioBtn');
+
+  if (bioData.ativado && bioData.id) {
+    btnBio.style.display = 'block';
+    // Tenta login automático com biometria
+    loginComBiometria();
+  }
 }
 
 // ── Login ─────────────────────────────────────────────
@@ -803,12 +993,23 @@ function verificarLogin() {
   }
 }
 
-function fazerLogin() {
+async function fazerLogin() {
   const u = document.getElementById('loginUser').value.trim();
   const s = document.getElementById('loginSenha').value;
   if (u === USUARIO && s === SENHA) {
     sessionStorage.setItem(SESS_KEY, '1');
     mostrarApp();
+
+    // Perguntar sobre biometria se suportado e não configurado ainda
+    const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
+    if (!bioData.hasOwnProperty('ativado')) {
+      const suporte = await verificarSuporteBiometria().catch(() => false);
+      if (suporte) {
+        setTimeout(() => {
+          document.getElementById('bioBanner').style.display = 'block';
+        }, 1000);
+      }
+    }
   } else {
     const err = document.getElementById('loginErr');
     err.textContent = 'Usuário ou senha incorretos';
@@ -824,6 +1025,7 @@ function mostrarApp() {
 
 // Verifica login ao carregar
 verificarLogin();
+verificarBiometriaDisponivel();
 
 // ── PWA Service Worker ────────────────────────────────
 if ('serviceWorker' in navigator) {
