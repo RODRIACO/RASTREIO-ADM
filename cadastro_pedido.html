@@ -191,7 +191,6 @@
     .btn-bio-sim{padding:9px 20px;background:#e8620a;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;}
     .btn-bio-nao{padding:9px 16px;background:transparent;color:#555;border:1px solid #333;border-radius:4px;font-size:12px;cursor:pointer;text-transform:uppercase;}
     .bio-icon{font-size:36px;margin-bottom:8px;}
-    .login-bio-btn{width:100%;padding:14px;background:#1e1e1e;color:#e8620a;border:1.5px solid #e8620a;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;display:none;}
     .login-bio-btn:hover{background:#e8620a;color:#fff;}
 
     /* Banner de instalação */
@@ -247,7 +246,6 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
-    <button class="login-bio-btn" id="loginBioBtn" onclick="iniciarBiometria()">🔐 Entrar com Digital / Face ID</button>
     <div class="login-err" id="loginErr"></div>
   </div>
   <div class="login-version">v1.0 — Rodriaço + Sodexo</div>
@@ -432,8 +430,8 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdIvso4Pvx9xcF
 
 const ETAPAS = [
   {key:'producao',    icon:'⚙️', nome:'Processo de Produção'},
-  {key:'pronto',      icon:'📦', nome:'Pedido Pronto'},
   {key:'agendado',    icon:'📅', nome:'Agendamento de Entrega'},
+  {key:'pronto',      icon:'📦', nome:'Pedido Pronto'},
   {key:'em transito', icon:'🚚', nome:'Saída em Rota'},
   {key:'entregue',    icon:'✅', nome:'Entregue'},
 ];
@@ -488,6 +486,19 @@ function toggleStatus(prefix, key, checked) {
   }
   if (!checked) {
     dataInput.value = '';
+  }
+
+  // Ao marcar "Saída em Rota", marca "Pedido Pronto" se ainda não estiver marcado
+  if (key === 'em transito' && checked) {
+    const chkPronto = document.getElementById(`${prefix}_chk_pronto`);
+    const dataPronto = document.getElementById(`${prefix}_data_pronto`);
+    const rowPronto = document.getElementById(`${prefix}_row_pronto`);
+    if (chkPronto && !chkPronto.checked) {
+      chkPronto.checked = true;
+      rowPronto.classList.add('ativo');
+      dataPronto.disabled = false;
+      dataPronto.value = dataInput.value;
+    }
   }
 }
 
@@ -545,7 +556,7 @@ function coletarStatus(prefix) {
 
 // ── Gera histórico a partir dos status ───────────────
 function gerarHistorico(statusData) {
-  const ordem = ['entregue','em transito','agendado','pronto','producao'];
+  const ordem = ['entregue','em transito','pronto','agendado','producao'];
   const linhas = [];
   ordem.forEach(key => {
     if (statusData[key] && statusData[key+'_data']) {
@@ -564,7 +575,7 @@ function gerarHistorico(statusData) {
 
 // ── Status atual (último marcado) ────────────────────
 function statusAtual(statusData) {
-  const ordem = ['entregue','em transito','agendado','pronto','producao'];
+  const ordem = ['entregue','em transito','pronto','agendado','producao'];
   for (const key of ordem) {
     if (statusData[key]) return key.toUpperCase();
   }
@@ -702,7 +713,13 @@ function renderTabela(rows) {
     const cli = r['cliente'] || '';
     const desc= r['descricao'] || '';
     const st  = r['status'] || '';
-    const prev= r['previsao de entrega'] || '';
+    let prev = r['previsao de entrega'] || '';
+    if (prev.includes('GMT') || prev.includes('00:00:00')) {
+      try {
+        const d = new Date(prev);
+        if (!isNaN(d)) prev = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+      } catch(e) {}
+    }
     const nf  = r['nota fiscal'] || '';
     const sc  = statusClass(st);
     return `<tr onclick="selecionarLinha(${todosOsPedidos.indexOf(r)})">
@@ -749,7 +766,18 @@ function preencherFormEdicao(p, linha) {
   document.getElementById('e_numeroPedido').value  = pn['numero do pedido'] || '';
   document.getElementById('e_cliente').value        = pn['cliente'] || '';
   document.getElementById('e_descricao').value      = pn['descricao'] || '';
-  document.getElementById('e_previsao').value       = pn['previsao de entrega'] || '';
+  const prevRaw = pn['previsao de entrega'] || '';
+    // Remove formato de data longo do Google Sheets
+    let prevLimpa = prevRaw;
+    if (prevRaw.includes('GMT') || prevRaw.includes('00:00:00')) {
+      try {
+        const d = new Date(prevRaw);
+        if (!isNaN(d)) {
+          prevLimpa = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+        }
+      } catch(e) { prevLimpa = prevRaw; }
+    }
+    document.getElementById('e_previsao').value = prevLimpa;
   document.getElementById('e_localizacao').value    = pn['localizacao atual'] || '';
   document.getElementById('e_recebidoPor').value    = pn['recebido por'] || '';
   document.getElementById('e_transportadora').value = pn['transportadora'] || '';
@@ -910,8 +938,13 @@ async function confirmarExclusao() {
 const BIO_KEY = 'rodriaco_bio';
 const BIO_TOGGLE_KEY = 'rodriaco_bio_toggle';
 
+function isMobile() {
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+}
+
 async function verificarSuporteBiometria() {
   try {
+    if (!isMobile()) return false; // PC → sem biometria
     if (!window.PublicKeyCredential) return false;
     return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
   } catch(e) { return false; }
@@ -920,9 +953,8 @@ async function verificarSuporteBiometria() {
 function salvarToggleBio(ativado) {
   localStorage.setItem(BIO_TOGGLE_KEY, ativado ? '1' : '0');
   if (!ativado) {
-    // Desligar → remove biometria registrada
     localStorage.removeItem(BIO_KEY);
-    document.getElementById('loginBioBtn').style.display = 'none';
+    showToast('🔐 Biometria desativada', 'info');
   }
 }
 
@@ -950,77 +982,59 @@ async function ativarBiometria() {
         timeout: 60000
       }
     });
-
     if (credencial) {
       localStorage.setItem(BIO_KEY, JSON.stringify({
         id: Array.from(new Uint8Array(credencial.rawId)),
         ativado: true
       }));
-      showToast('🔐 Biometria ativada! Próximos acessos use Digital / Face ID.', 'ok');
+      showToast('🔐 Biometria ativada! Próximos acessos serão automáticos.', 'ok');
     }
   } catch(e) {
-    // Se falhar, desliga o toggle
     document.getElementById('bioToggle').checked = false;
     localStorage.setItem(BIO_TOGGLE_KEY, '0');
     localStorage.removeItem(BIO_KEY);
-    if (e.name === 'NotAllowedError') {
-      showToast('⚠️ Permissão negada. Biometria desativada.', 'err');
-    } else {
-      showToast('⚠️ Biometria não disponível neste dispositivo.', 'err');
-    }
+    showToast('⚠️ Biometria não disponível neste dispositivo.', 'err');
   }
 }
 
-async function iniciarBiometria() {
+async function tentarLoginBiometrico() {
   try {
     const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
     if (!bioData.ativado || !bioData.id) return;
-
-    showToast('🔐 Aguarde...', 'info');
     const assertion = await navigator.credentials.get({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
-        allowCredentials: [{
-          id: new Uint8Array(bioData.id),
-          type: 'public-key',
-          transports: ['internal']
-        }],
+        allowCredentials: [{ id: new Uint8Array(bioData.id), type: 'public-key', transports: ['internal'] }],
         userVerification: 'required',
         timeout: 60000
       }
     });
-
     if (assertion) {
       sessionStorage.setItem(SESS_KEY, '1');
       mostrarApp();
     }
   } catch(e) {
-    showToast('⚠️ Tente novamente ou use a senha', 'err');
+    // Falhou → fica na tela de login normal, sem mensagem
   }
 }
 
 async function verificarBiometriaDisponivel() {
   const suporte = await verificarSuporteBiometria();
-  const toggle = document.getElementById('bioToggle');
-  const btnBio = document.getElementById('loginBioBtn');
-  const toggleWrap = toggle.closest('.bio-toggle-wrap');
+  const toggleWrap = document.querySelector('.bio-toggle-wrap');
 
   if (!suporte) {
-    toggleWrap.style.display = 'none';
-    btnBio.style.display = 'none';
+    if (toggleWrap) toggleWrap.style.display = 'none';
     return;
   }
 
   // Restaura estado do toggle
   const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
-  toggle.checked = toggleAtivo;
+  document.getElementById('bioToggle').checked = toggleAtivo;
 
-  // Mostra botão de login biométrico só se toggle ligado E já registrado
+  // Se toggle ligado e biometria registrada → tenta login automático
   const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
   if (toggleAtivo && bioData.ativado && bioData.id) {
-    btnBio.style.display = 'block';
-  } else {
-    btnBio.style.display = 'none';
+    tentarLoginBiometrico();
   }
 }
 
@@ -1043,10 +1057,12 @@ async function fazerLogin() {
     mostrarApp();
 
     // Se toggle de biometria estiver ligado e ainda não registrado, registra agora
-    const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
-    const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
-    if (toggleAtivo && (!bioData.ativado || !bioData.id)) {
-      setTimeout(() => ativarBiometria(), 800);
+    if (isMobile()) {
+      const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
+      const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
+      if (toggleAtivo && (!bioData.ativado || !bioData.id)) {
+        setTimeout(() => ativarBiometria(), 800);
+      }
     }
 
 
