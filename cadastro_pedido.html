@@ -137,6 +137,7 @@
     .b-entregue{background:#e8620a;color:#fff;}
     .b-transito{background:#111;color:#e8620a;border:1px solid #e8620a;}
     .b-producao,.b-default{background:#333;color:#aaa;}
+    .b-cancelado{background:#7a1f1f;color:#fff;}
     .b-pronto{background:#1e3a5a;color:#7fb8f0;}
     .b-agendado{background:#2a1a4a;color:#c8a0f8;}
     .tabela-vazia{text-align:center;padding:28px;color:#444;font-size:13px;cursor:default;}
@@ -195,6 +196,12 @@
 
     /* Botão excluir */
     .btn-excluir{width:100%;margin-top:8px;padding:11px;background:transparent;color:#c0392b;border:1.5px solid #c0392b;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;}
+    /* Cancelar guarda o pedido; excluir apaga. Por isso a cor é mais branda. */
+    .btn-cancelar-pedido{width:100%;margin-top:8px;padding:11px;background:transparent;color:#c8901f;border:1.5px solid #c8901f;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;}
+    .btn-cancelar-pedido:hover{background:#c8901f;color:#111;}
+    .btn-reativar{width:100%;margin-top:8px;padding:11px;background:transparent;color:#2e9e5b;border:1.5px solid #2e9e5b;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;}
+    .btn-reativar:hover{background:#2e9e5b;color:#111;}
+    .aviso-cancelado{margin-top:10px;padding:10px 12px;border:1.5px solid #7a1f1f;border-radius:4px;background:#2a1010;color:#e0a0a0;font-size:12px;}
     .btn-excluir:hover{background:#c0392b;color:#fff;}
     .btn-excluir:disabled{opacity:.5;cursor:not-allowed;}
 
@@ -211,6 +218,9 @@
     .btn-confirmar-excluir{flex:1;padding:12px;background:#c0392b;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;opacity:.5;pointer-events:none;}
     .btn-confirmar-excluir.ativo{opacity:1;pointer-events:all;}
     .btn-confirmar-excluir.ativo:hover{background:#a93226;}
+    /* o cancelamento tem volta, então não usa o vermelho do excluir */
+    .btn-confirmar-excluir.btn-confirmar-cancelar{background:#c8901f;color:#111;}
+    .btn-confirmar-excluir.btn-confirmar-cancelar:hover{background:#a97914;}
     .btn-cancelar-modal{flex:1;padding:12px;background:transparent;color:#aaa;border:1.5px solid #333;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;}
     .btn-cancelar-modal:hover{border-color:#e8620a;color:#e8620a;}
 
@@ -303,6 +313,12 @@
     <div class="field"><label>Recebido Por</label><input type="text" id="n_recebido_por" placeholder="Ex: Natalia"/></div>
   </div>
 
+  <div class="section-label">Planejamento de Embarque — só para o painel da TV</div>
+  <div class="grid">
+    <div class="field"><label>Previsão de Embarque</label><input type="date" id="n_embarque_previsto"/></div>
+    <div class="field"><label>Rota</label><input type="text" id="n_rota" placeholder="Ex: Simões Filho"/></div>
+  </div>
+
   <div class="section-label">Transportador</div>
   <div class="grid g3">
     <div class="field"><label>Transportadora</label><input type="text" id="n_transportadora" placeholder="Ex: Sidnei"/></div>
@@ -362,6 +378,12 @@
       <div class="field"><label>Recebido Por</label><input type="text" id="e_recebido_por"/></div>
     </div>
 
+    <div class="section-label">Planejamento de Embarque — só para o painel da TV</div>
+    <div class="grid">
+      <div class="field"><label>Previsão de Embarque</label><input type="date" id="e_embarque_previsto"/></div>
+      <div class="field"><label>Rota</label><input type="text" id="e_rota"/></div>
+    </div>
+
     <div class="section-label">Transportador</div>
     <div class="grid g3">
       <div class="field"><label>Transportadora</label><input type="text" id="e_transportadora"/></div>
@@ -384,8 +406,12 @@
     <div class="section-label">Observações</div>
     <div class="field"><textarea id="e_observacao"></textarea></div>
 
+    <div class="aviso-cancelado" id="e_avisoCancelado" style="display:none;">Este pedido está cancelado. Ele aparece como cancelado no painel e no rastreio.</div>
+
     <button class="btn-salvar" id="e_btnSalvar" onclick="salvarEdicao()">💾 Salvar Alterações</button>
     <button class="btn-limpar" onclick="limparEdicao()">✖ Cancelar</button>
+    <button class="btn-cancelar-pedido" id="btnCancelarPedido" onclick="abrirModalCancelar()">🚫 Cancelar Pedido</button>
+    <button class="btn-reativar" id="btnReativarPedido" onclick="reativarPedido()" style="display:none;">↩ Reativar Pedido</button>
     <button class="btn-excluir" id="btnExcluir" onclick="abrirModalExcluir()">🗑 Excluir Pedido</button>
   </div>
   </div><!-- /estreito -->
@@ -417,6 +443,17 @@
     <div class="modal-btns">
       <button class="btn-cancelar-modal" onclick="fecharModalExcluir()">Cancelar</button>
       <button class="btn-confirmar-excluir" id="btnConfirmarExcluir" onclick="confirmarExclusao()">🗑 Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCancelar">
+  <div class="modal-box">
+    <div class="modal-title">🚫 Cancelar Pedido</div>
+    <div class="modal-sub">Cancelar o pedido <span id="modalCancelarInfo"></span>?<br/><br/>O pedido continua no sistema, com todo o histórico, e passa a aparecer como cancelado. Dá para reativar depois.</div>
+    <div class="modal-btns">
+      <button class="btn-cancelar-modal" onclick="fecharModalCancelar()">Voltar</button>
+      <button class="btn-confirmar-excluir btn-confirmar-cancelar ativo" id="btnConfirmarCancelar" onclick="confirmarCancelamento()">🚫 Cancelar Pedido</button>
     </div>
   </div>
 </div>
@@ -478,7 +515,7 @@ const ETAPAS = [
   {key:'entregue', col:'entregue_em', icon:'✅', nome:'Entregue'},
 ];
 const CAMPOS_TEXTO = ['numero','cliente','descricao','localizacao','recebido_por',
-                      'transportadora','motorista','telefone','nota_fiscal','observacao'];
+                      'transportadora','motorista','telefone','nota_fiscal','observacao','rota'];
 
 let sb = null;
 let pdfArquivo = {n:null, e:null};
@@ -609,6 +646,7 @@ function dadosDoForm(prefix) {
   const d = {};
   CAMPOS_TEXTO.forEach(c => { d[c] = $(`${prefix}_${c}`).value.trim(); });
   d.previsao = $(`${prefix}_previsao`).value || null;
+  d.embarque_previsto = $(`${prefix}_embarque_previsto`).value || null;
   return d;
 }
 
@@ -755,13 +793,14 @@ async function carregarTabela() {
 
 function textoDeBusca(p) {
   return norm([fmtDia(p.criado_em), p.numero, p.cliente, p.descricao, p.status, fmtData(p.previsao), p.nota_fiscal,
-               p.localizacao, p.recebido_por, p.transportadora, p.motorista, p.telefone, p.observacao].join(' '));
+               p.localizacao, p.recebido_por, p.transportadora, p.motorista, p.telefone, p.observacao,
+               p.rota, fmtData(p.embarque_previsto)].join(' '));
 }
 
 // ── Colunas da tabela: ordenar e filtrar pelo cabeçalho ──
 // "valor" é o que aparece na célula e na lista do filtro; "chave" é o que
 // decide a ordem (datas e status não se ordenam pelo texto).
-const ORDEM_STATUS = ['PRODUCAO','AGENDADO','PRONTO','EM TRANSITO','ENTREGUE'];
+const ORDEM_STATUS = ['PRODUCAO','AGENDADO','PRONTO','EM TRANSITO','ENTREGUE','CANCELADO'];
 const COLUNAS = [
   {id:'lancamento', titulo:'Lançamento', data:true, valor:p => fmtDia(p.criado_em),   chave:p => Date.parse(p.criado_em) || 0},
   {id:'numero',     titulo:'Nº Pedido',             valor:p => p.numero || '',        chave:p => p.numero || ''},
@@ -769,6 +808,8 @@ const COLUNAS = [
   {id:'descricao',  titulo:'Descrição',             valor:p => p.descricao || '',     chave:p => p.descricao || ''},
   {id:'status',     titulo:'Status',                valor:p => p.status || '',        chave:p => ORDEM_STATUS.indexOf(p.status)},
   {id:'previsao',   titulo:'Previsão',   data:true, valor:p => fmtData(p.previsao),   chave:p => Date.parse(p.previsao) || 0},
+  {id:'embarque',   titulo:'Embarque',   data:true, valor:p => fmtData(p.embarque_previsto), chave:p => Date.parse(p.embarque_previsto) || 0},
+  {id:'rota',       titulo:'Rota',                  valor:p => p.rota || '',          chave:p => p.rota || ''},
   {id:'nf',         titulo:'NF',                    valor:p => p.nota_fiscal || '',   chave:p => p.nota_fiscal || ''},
 ];
 let filtrosCol = {};    // id da coluna -> Set dos valores que ficam à mostra
@@ -917,7 +958,7 @@ async function carregarPedido() {
 }
 
 function classeStatus(s) {
-  return {'ENTREGUE':'b-entregue','EM TRANSITO':'b-transito','PRONTO':'b-pronto',
+  return {'CANCELADO':'b-cancelado','ENTREGUE':'b-entregue','EM TRANSITO':'b-transito','PRONTO':'b-pronto',
           'AGENDADO':'b-agendado','PRODUCAO':'b-producao'}[s] || 'b-default';
 }
 
@@ -955,6 +996,8 @@ function renderTabela(rows) {
     tdSt.appendChild(el('span', classeStatus(p.status), p.status || '—'));
     tr.appendChild(tdSt);
     tr.appendChild(el('td', '', fmtData(p.previsao)));
+    tr.appendChild(el('td', '', fmtData(p.embarque_previsto)));
+    tr.appendChild(el('td', '', p.rota));
     tr.appendChild(el('td', '', p.nota_fiscal));
     const tdBtn = el('td');
     tdBtn.appendChild(el('button', 'btn-editar-linha', '✏️ Editar'));
@@ -988,8 +1031,10 @@ function preencherFormEdicao(p) {
   pedidoEdicao = p;
   CAMPOS_TEXTO.forEach(c => { $('e_' + c).value = p[c] || ''; });
   $('e_previsao').value = p.previsao || '';
+  $('e_embarque_previsto').value = p.embarque_previsto || '';
   $('e_lancamento').value = diaCampo(p.criado_em);
   montarStatusGrid('e_statusGrid', 'e', p);
+  mostrarEstadoCancelamento(p);
 
   // PDF escolhido para outro pedido não pode vir junto para este.
   limparPDF('e');
@@ -1043,6 +1088,7 @@ async function salvarEdicao() {
 function limparNovo() {
   CAMPOS_TEXTO.forEach(c => { $('n_' + c).value = ''; });
   $('n_previsao').value = '';
+  $('n_embarque_previsto').value = '';
   $('n_lancamento').value = hojeCampo();
   limparPDF('n');
   montarStatusGrid('n_statusGrid', 'n', null);
@@ -1065,6 +1111,58 @@ function showToast(msg, tipo) {
   t.className = 'toast ' + tipo + ' show';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.className = 'toast ' + tipo, tipo === 'err' ? 5000 : 3200);
+}
+
+// ── Cancelamento ──────────────────────────────────────
+// Cancelar preserva o pedido e o histórico; quem apaga é o Excluir.
+// O status é calculado pelo banco a partir de cancelado_em, então aqui
+// só se grava (ou se limpa) essa data.
+function mostrarEstadoCancelamento(p) {
+  const cancelado = !!(p && p.cancelado_em);
+  $('e_avisoCancelado').style.display    = cancelado ? 'block' : 'none';
+  $('btnCancelarPedido').style.display   = cancelado ? 'none'  : 'block';
+  $('btnReativarPedido').style.display   = cancelado ? 'block' : 'none';
+}
+
+function abrirModalCancelar() {
+  if (!pedidoEdicao) return showToast('Carregue um pedido primeiro', 'err');
+  $('modalCancelarInfo').textContent = `Nº ${pedidoEdicao.numero} — ${pedidoEdicao.cliente}`;
+  $('modalCancelar').classList.add('show');
+}
+
+function fecharModalCancelar() {
+  $('modalCancelar').classList.remove('show');
+}
+
+async function confirmarCancelamento() {
+  await mudarCancelamento(new Date().toISOString(), 'btnConfirmarCancelar', 'Cancelando...', '🚫 Pedido cancelado!');
+  fecharModalCancelar();
+}
+
+async function reativarPedido() {
+  await mudarCancelamento(null, 'btnReativarPedido', 'Reativando...', '↩ Pedido reativado!');
+}
+
+async function mudarCancelamento(valor, idBotao, ocupadoTxt, okTxt) {
+  if (!pedidoEdicao) return showToast('Carregue um pedido primeiro', 'err');
+  const btn = $(idBotao);
+  const rotulo = btn.innerHTML;
+  ocupado(btn, ocupadoTxt);
+  try {
+    const { data, error } = await sb.from(TABELA)
+      .update({cancelado_em: valor}).eq('id', pedidoEdicao.id).select('id');
+    if (error) throw error;
+    if (!data.length) throw new Error('Este pedido não existe mais — foi excluído por outra pessoa.');
+    showToast(okTxt, 'ok');
+    const id = pedidoEdicao.id;
+    await carregarTabela();
+    const atualizado = todosOsPedidos.find(p => p.id === id);
+    if (atualizado) preencherFormEdicao(atualizado);
+  } catch (e) {
+    showToast('❌ ' + erroMsg(e), 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = rotulo;
+  }
 }
 
 // ── Exclusão ──────────────────────────────────────────
