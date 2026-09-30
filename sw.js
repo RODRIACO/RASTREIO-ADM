@@ -1,4 +1,4 @@
-const CACHE = 'rodriaco-v3';
+const CACHE = 'rodriaco-v4';
 const ASSETS = [
   'cadastro_pedido.html',
   'manifest.json',

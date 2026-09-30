@@ -8,14 +8,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Rodriaço"/>
-  <link rel="manifest" href="/RASTREIO-ADM/manifest.json"/>
-  <link rel="apple-touch-icon" href="/RASTREIO-ADM/icon-192.png"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:Arial,sans-serif;background:#1a1a1a;min-height:100vh;color:#fff;}
-    .topbar{background:#111;padding:18px 32px;display:flex;align-items:center;justify-content:center;border-bottom:3px solid #e8620a;}
+    .topbar{background:#111;padding:18px 32px;display:flex;align-items:center;justify-content:center;border-bottom:3px solid #e8620a;position:relative;}
     .brand{font-size:22px;font-weight:900;color:#e8620a;text-transform:uppercase;letter-spacing:.04em;text-align:center;}
     .sub{font-size:11px;color:#666;letter-spacing:.12em;text-transform:uppercase;margin-top:2px;text-align:center;}
+    .btn-sair{position:absolute;right:16px;top:50%;transform:translateY(-50%);padding:7px 12px;background:transparent;color:#777;border:1px solid #333;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;}
+    .btn-sair:hover{color:#e8620a;border-color:#e8620a;}
 
     .tabs{display:flex;background:#111;border-bottom:1px solid #2a2a2a;}
     .tab{flex:1;padding:13px;text-align:center;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;color:#555;border-bottom:3px solid transparent;transition:all .2s;}
@@ -23,10 +25,14 @@
     .tab:hover{color:#fff;}
 
     .container{max-width:800px;margin:28px auto;padding:0 20px 60px;}
+    /* Na edição a tabela usa a tela inteira, para não cortar colunas no PC;
+       a busca e o formulário continuam na largura de sempre. */
+    #pageEditar .container{max-width:1600px;}
+    .estreito{max-width:760px;margin:0 auto;}
 
     /* Busca */
     .busca-wrap{display:flex;gap:0;margin-bottom:8px;}
-    .busca-wrap input{flex:1;padding:12px 16px;background:#1e1e1e;border:1.5px solid #333;border-right:none;border-radius:4px 0 0 4px;font-size:14px;color:#fff;outline:none;}
+    .busca-wrap input{flex:1;min-width:0;padding:12px 16px;background:#1e1e1e;border:1.5px solid #333;border-right:none;border-radius:4px 0 0 4px;font-size:14px;color:#fff;outline:none;}
     .busca-wrap input:focus{border-color:#e8620a;}
     .busca-wrap button{padding:12px 22px;background:#e8620a;color:#fff;border:none;border-radius:0 4px 4px 0;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;}
     .busca-wrap button:hover{background:#c9520a;}
@@ -38,12 +44,12 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
     .grid.g3{grid-template-columns:1fr 1fr 1fr;}
     .grid.single{grid-template-columns:1fr;}
-    .field{display:flex;flex-direction:column;gap:5px;}
+    .field{display:flex;flex-direction:column;gap:5px;min-width:0;}
     .field label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.08em;}
     .field input,.field select,.field textarea{
       background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;
       padding:10px 12px;font-size:13px;color:#fff;outline:none;
-      transition:border-color .2s;font-family:Arial,sans-serif;
+      transition:border-color .2s;font-family:Arial,sans-serif;color-scheme:dark;width:100%;
     }
     .field input:focus,.field select:focus,.field textarea:focus{border-color:#e8620a;}
     .field select option{background:#1e1e1e;}
@@ -59,10 +65,10 @@
     .status-icon{font-size:16px;flex-shrink:0;}
     .status-nome{flex:1;font-size:13px;font-weight:700;color:#aaa;}
     .status-row.ativo .status-nome{color:#fff;}
-    .status-data{width:145px;flex-shrink:0;}
+    .status-data{width:190px;flex-shrink:0;}
     .status-data input{
       width:100%;background:#111;border:1px solid #333;border-radius:3px;
-      padding:6px 9px;font-size:11px;color:#e8620a;outline:none;font-family:Arial,sans-serif;
+      padding:6px 9px;font-size:11px;color:#e8620a;outline:none;font-family:Arial,sans-serif;color-scheme:dark;
     }
     .status-data input:focus{border-color:#e8620a;}
     .status-data input:disabled{color:#444;border-color:#222;}
@@ -78,7 +84,9 @@
     .upload-icon{font-size:28px;margin-bottom:6px;}
     .upload-text{font-size:12px;color:#666;}
     .upload-text span{color:#e8620a;font-weight:700;}
-    .upload-name{margin-top:8px;font-size:12px;color:#e8620a;font-weight:700;display:none;}
+    .upload-name{margin-top:8px;font-size:12px;color:#e8620a;font-weight:700;display:none;overflow-wrap:anywhere;}
+    .pdf-atual{display:none;margin-top:8px;font-size:12px;color:#777;}
+    .pdf-atual a{color:#e8620a;font-weight:700;}
 
     .btn-salvar{
       width:100%;margin-top:26px;padding:14px;
@@ -102,8 +110,8 @@
     .toast{
       position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
       padding:13px 28px;border-radius:6px;font-size:13px;font-weight:700;
-      opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;
-      text-align:center;min-width:260px;
+      opacity:0;transition:opacity .3s;pointer-events:none;z-index:99998;
+      text-align:center;min-width:260px;max-width:92vw;
     }
     .toast.show{opacity:1;}
     .toast.ok{background:#1a3a1a;color:#7af07a;border:1px solid #2a6a2a;}
@@ -123,20 +131,51 @@
     thead th{padding:9px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#e8620a;border-bottom:1px solid #2a2a2a;white-space:nowrap;}
     tbody tr{border-bottom:1px solid #222;cursor:pointer;transition:background .15s;}
     tbody tr:hover{background:#252525;}
-    tbody tr.selecionada{background:#1e1e1e;border-left:3px solid #e8620a;}
-    tbody td{padding:9px 12px;color:#ccc;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+    tbody tr.selecionada{background:#1e1e1e;box-shadow:inset 3px 0 0 #e8620a;}
+    tbody td{padding:9px 12px;color:#ccc;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis;}
     tbody td.badge-cel span{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:2px;text-transform:uppercase;}
     .b-entregue{background:#e8620a;color:#fff;}
     .b-transito{background:#111;color:#e8620a;border:1px solid #e8620a;}
     .b-producao,.b-default{background:#333;color:#aaa;}
     .b-pronto{background:#1e3a5a;color:#7fb8f0;}
     .b-agendado{background:#2a1a4a;color:#c8a0f8;}
-    .tabela-vazia{text-align:center;padding:28px;color:#444;font-size:13px;}
+    .tabela-vazia{text-align:center;padding:28px;color:#444;font-size:13px;cursor:default;}
     .tabela-info{font-size:10px;color:#555;padding:6px 13px;background:#111;border-top:1px solid #222;}
     .btn-editar-linha{padding:4px 10px;background:transparent;color:#e8620a;border:1px solid #e8620a;border-radius:3px;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;}
     .btn-editar-linha:hover{background:#e8620a;color:#fff;}
+    .tabela-info button{background:none;border:none;color:#e8620a;font-size:10px;font-weight:700;cursor:pointer;padding:0;margin-left:8px;text-decoration:underline;}
 
-    /* Login */
+    /* Filtro no cabeçalho, como nas tabelas da planilha */
+    thead th[data-col]{cursor:pointer;user-select:none;}
+    thead th[data-col]:hover{background:#1a1a1a;}
+    .th-in{display:flex;align-items:center;gap:6px;}
+    .th-seta{font-size:9px;color:#fff;}
+    .th-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border:1px solid #333;border-radius:3px;font-size:7px;color:#666;flex-shrink:0;margin-left:auto;}
+    thead th.filtrada .th-btn{background:#e8620a;border-color:#e8620a;color:#fff;}
+    .col-menu{position:fixed;z-index:9000;width:260px;max-width:calc(100vw - 16px);background:#1a1a1a;border:1.5px solid #333;border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,.6);padding:10px;display:none;max-height:calc(100vh - 16px);overflow-y:auto;}
+    .col-menu.show{display:block;}
+    .cm-ord{display:block;width:100%;text-align:left;padding:8px 10px;background:transparent;border:none;color:#ccc;font-size:12px;cursor:pointer;border-radius:4px;font-family:Arial,sans-serif;}
+    .cm-ord:hover{background:#252525;color:#fff;}
+    .cm-ord.ativo{color:#e8620a;font-weight:700;}
+    .cm-sep{height:1px;background:#2a2a2a;margin:8px 0;}
+    .cm-busca{width:100%;padding:8px 10px;background:#111;border:1px solid #333;border-radius:4px;color:#fff;font-size:13px;outline:none;font-family:Arial,sans-serif;}
+    .cm-busca:focus{border-color:#e8620a;}
+    .cm-links{display:flex;gap:14px;margin:8px 2px;}
+    .cm-links button{background:none;border:none;color:#e8620a;cursor:pointer;font-size:11px;padding:0;}
+    .cm-lista{max-height:210px;overflow-y:auto;border:1px solid #2a2a2a;border-radius:4px;padding:4px;}
+    .cm-item{display:flex;align-items:center;gap:8px;padding:5px 6px;font-size:12px;color:#ccc;cursor:pointer;border-radius:3px;}
+    .cm-item:hover{background:#252525;}
+    .cm-item input{accent-color:#e8620a;width:15px;height:15px;flex-shrink:0;cursor:pointer;}
+    .cm-item .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cm-item .q{color:#555;font-size:10px;flex-shrink:0;}
+    .cm-vazio{padding:10px;text-align:center;color:#555;font-size:12px;}
+    .cm-acoes{display:flex;gap:8px;margin-top:10px;}
+    .cm-acoes button{flex:1;padding:9px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;letter-spacing:.06em;}
+    .cm-ok{background:#e8620a;color:#fff;border:none;}
+    .cm-ok:hover{background:#c9520a;}
+    .cm-cancel{background:transparent;color:#aaa;border:1.5px solid #333;}
+
+    /* Entrada */
     .login-screen{position:fixed;inset:0;background:#111;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
     .login-box{width:100%;max-width:340px;}
     .login-logo{text-align:center;margin-bottom:32px;}
@@ -144,17 +183,20 @@
     .login-logo .sub{font-size:11px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-top:4px;}
     .login-field{margin-bottom:14px;}
     .login-field label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px;}
-    .login-field input{width:100%;padding:13px 15px;background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;font-size:14px;color:#fff;outline:none;font-family:Arial,sans-serif;transition:border-color .2s;}
+    .login-field input{width:100%;padding:13px 15px;background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;font-size:16px;color:#fff;outline:none;font-family:Arial,sans-serif;transition:border-color .2s;}
     .login-field input:focus{border-color:#e8620a;}
     .login-field input::placeholder{color:#444;}
     .login-btn{width:100%;padding:14px;background:#e8620a;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;margin-top:8px;transition:background .2s;}
     .login-btn:hover{background:#c9520a;}
+    .login-btn:disabled{background:#5a3010;cursor:not-allowed;}
     .login-err{color:#f07a7a;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
+    .login-aguarde{text-align:center;color:#555;font-size:12px;text-transform:uppercase;letter-spacing:.1em;}
     .login-version{position:absolute;bottom:16px;font-size:10px;color:#333;letter-spacing:.08em;}
 
     /* Botão excluir */
     .btn-excluir{width:100%;margin-top:8px;padding:11px;background:transparent;color:#c0392b;border:1.5px solid #c0392b;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;}
     .btn-excluir:hover{background:#c0392b;color:#fff;}
+    .btn-excluir:disabled{opacity:.5;cursor:not-allowed;}
 
     /* Modal */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9998;display:none;align-items:center;justify-content:center;padding:20px;}
@@ -171,27 +213,6 @@
     .btn-confirmar-excluir.ativo:hover{background:#a93226;}
     .btn-cancelar-modal{flex:1;padding:12px;background:transparent;color:#aaa;border:1.5px solid #333;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;}
     .btn-cancelar-modal:hover{border-color:#e8620a;color:#e8620a;}
-
-    /* Toggle biometria */
-    .bio-toggle-wrap{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:12px 14px;background:#1e1e1e;border:1.5px solid #2a2a2a;border-radius:4px;}
-    .bio-toggle-label{display:flex;align-items:center;gap:8px;font-size:12px;color:#777;}
-    .bio-toggle-label span{font-size:16px;}
-    .toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
-    .toggle input{opacity:0;width:0;height:0;}
-    .toggle-slider{position:absolute;inset:0;background:#333;border-radius:22px;cursor:pointer;transition:.3s;}
-    .toggle-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;}
-    .toggle input:checked + .toggle-slider{background:#e8620a;}
-    .toggle input:checked + .toggle-slider:before{transform:translateX(18px);}
-
-    /* Biometria */
-    .bio-banner{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:6px;padding:16px;margin-top:14px;text-align:center;display:none;}
-    .bio-banner-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;}
-    .bio-banner-sub{font-size:11px;color:#666;margin-bottom:12px;}
-    .bio-btns{display:flex;gap:8px;justify-content:center;}
-    .btn-bio-sim{padding:9px 20px;background:#e8620a;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;}
-    .btn-bio-nao{padding:9px 16px;background:transparent;color:#555;border:1px solid #333;border-radius:4px;font-size:12px;cursor:pointer;text-transform:uppercase;}
-    .bio-icon{font-size:36px;margin-bottom:8px;}
-    .login-bio-btn:hover{background:#e8620a;color:#fff;}
 
     /* Banner de instalação */
     .install-banner{
@@ -215,40 +236,33 @@
 
     @media(max-width:600px){
       .grid,.grid.g3{grid-template-columns:1fr;}
-      .status-data{width:130px;}
+      .status-row{flex-wrap:wrap;}
+      .status-data{width:100%;}
+      .topbar{padding:14px 70px 14px 16px;}
+      .brand{font-size:18px;}
     }
   </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ENTRADA -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <div class="login-logo">
       <div class="brand">Rodriaço ✦ Sodexo</div>
       <div class="sub">Gestão de Pedidos</div>
     </div>
-    <div class="login-field">
-      <label>Usuário</label>
-      <input type="text" id="loginUser" placeholder="Digite seu usuário" onkeydown="if(event.key==='Enter')fazerLogin()"/>
-    </div>
-    <div class="login-field">
-      <label>Senha</label>
-      <input type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter')fazerLogin()"/>
-    </div>
-    <button class="login-btn" onclick="fazerLogin()">Entrar</button>
-    <div class="bio-toggle-wrap">
-      <div class="bio-toggle-label">
-        <span>🔐</span> Usar Digital / Face ID
+    <div class="login-aguarde" id="loginAguarde">Carregando...</div>
+    <div id="loginForm" style="display:none;">
+      <div class="login-field">
+        <label for="loginCodigo">Código de acesso</label>
+        <input type="password" id="loginCodigo" placeholder="Digite o código" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"/>
       </div>
-      <label class="toggle">
-        <input type="checkbox" id="bioToggle" onchange="salvarToggleBio(this.checked)"/>
-        <span class="toggle-slider"></span>
-      </label>
+      <button class="login-btn" id="loginBtn" onclick="entrar()">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
     </div>
-    <div class="login-err" id="loginErr"></div>
   </div>
-  <div class="login-version">v1.0 — Rodriaço + Sodexo</div>
+  <div class="login-version">v2.0 — Rodriaço + Sodexo</div>
 </div>
 
 <div id="appContent" style="display:none;">
@@ -257,6 +271,7 @@
     <div class="brand">Rodriaço ✦ Sodexo</div>
     <div class="sub">Gestão de Pedidos</div>
   </div>
+  <button class="btn-sair" onclick="sair()">Sair</button>
 </div>
 
 <div class="tabs">
@@ -270,11 +285,12 @@
 
   <div class="section-label">Identificação</div>
   <div class="grid">
-    <div class="field"><label>Número do Pedido *</label><input type="text" id="n_numeroPedido" placeholder="Ex: 31756"/></div>
+    <div class="field"><label>Número do Pedido *</label><input type="text" id="n_numero" maxlength="40" placeholder="Ex: 31756"/></div>
     <div class="field"><label>Cliente *</label><input type="text" id="n_cliente" placeholder="Ex: SDX ORIGEM"/></div>
   </div>
-  <div class="grid single" style="margin-top:11px;">
+  <div class="grid" style="margin-top:11px;">
     <div class="field"><label>Descrição</label><input type="text" id="n_descricao" placeholder="Ex: BALCÕES"/></div>
+    <div class="field"><label>Data de Lançamento</label><input type="date" id="n_lancamento"/></div>
   </div>
 
   <div class="section-label">Etapas do Pedido</div>
@@ -282,9 +298,9 @@
 
   <div class="section-label">Entrega</div>
   <div class="grid">
-    <div class="field"><label>Previsão de Entrega</label><input type="text" id="n_previsao" placeholder="Ex: 20/04"/></div>
+    <div class="field"><label>Previsão de Entrega</label><input type="date" id="n_previsao"/></div>
     <div class="field"><label>Localização Atual</label><input type="text" id="n_localizacao" placeholder="Ex: São Paulo"/></div>
-    <div class="field"><label>Recebido Por</label><input type="text" id="n_recebidoPor" placeholder="Ex: Natalia"/></div>
+    <div class="field"><label>Recebido Por</label><input type="text" id="n_recebido_por" placeholder="Ex: Natalia"/></div>
   </div>
 
   <div class="section-label">Transportador</div>
@@ -296,10 +312,10 @@
 
   <div class="section-label">Nota Fiscal</div>
   <div class="grid">
-    <div class="field"><label>Número da NF</label><input type="text" id="n_notaFiscal" placeholder="Ex: 50416"/></div>
+    <div class="field"><label>Número da NF</label><input type="text" id="n_nota_fiscal" placeholder="Ex: 50416"/></div>
   </div>
   <div class="upload-area" id="n_uploadArea">
-    <input type="file" id="n_pdfInput" accept=".pdf" onchange="selecionarPDF(this,'n')"/>
+    <input type="file" id="n_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'n')"/>
     <div class="upload-icon">📄</div>
     <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
     <div class="upload-name" id="n_uploadName"></div>
@@ -317,6 +333,7 @@
 <div class="page" id="pageEditar">
 <div class="container">
 
+  <div class="estreito">
   <div class="section-label">Buscar Pedido</div>
   <div class="busca-wrap">
     <input type="text" id="e_busca" placeholder="Número do Pedido ou Número da NF..." onkeydown="if(event.key==='Enter')carregarPedido()"/>
@@ -327,11 +344,12 @@
   <div id="e_form" style="display:none;">
     <div class="section-label">Identificação</div>
     <div class="grid">
-      <div class="field"><label>Número do Pedido</label><input type="text" id="e_numeroPedido"/></div>
+      <div class="field"><label>Número do Pedido</label><input type="text" id="e_numero" maxlength="40"/></div>
       <div class="field"><label>Cliente</label><input type="text" id="e_cliente"/></div>
     </div>
-    <div class="grid single" style="margin-top:11px;">
+    <div class="grid" style="margin-top:11px;">
       <div class="field"><label>Descrição</label><input type="text" id="e_descricao"/></div>
+      <div class="field"><label>Data de Lançamento</label><input type="date" id="e_lancamento"/></div>
     </div>
 
     <div class="section-label">Etapas do Pedido</div>
@@ -339,9 +357,9 @@
 
     <div class="section-label">Entrega</div>
     <div class="grid">
-      <div class="field"><label>Previsão de Entrega</label><input type="text" id="e_previsao"/></div>
+      <div class="field"><label>Previsão de Entrega</label><input type="date" id="e_previsao"/></div>
       <div class="field"><label>Localização Atual</label><input type="text" id="e_localizacao"/></div>
-      <div class="field"><label>Recebido Por</label><input type="text" id="e_recebidoPor"/></div>
+      <div class="field"><label>Recebido Por</label><input type="text" id="e_recebido_por"/></div>
     </div>
 
     <div class="section-label">Transportador</div>
@@ -353,14 +371,15 @@
 
     <div class="section-label">Nota Fiscal</div>
     <div class="grid">
-      <div class="field"><label>Número da NF</label><input type="text" id="e_notaFiscal"/></div>
+      <div class="field"><label>Número da NF</label><input type="text" id="e_nota_fiscal"/></div>
     </div>
     <div class="upload-area" id="e_uploadArea">
-      <input type="file" id="e_pdfInput" accept=".pdf" onchange="selecionarPDF(this,'e')"/>
+      <input type="file" id="e_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'e')"/>
       <div class="upload-icon">📄</div>
       <div class="upload-text">Substituir PDF — <span>clique para selecionar</span></div>
       <div class="upload-name" id="e_uploadName"></div>
     </div>
+    <div class="pdf-atual" id="e_pdfAtual">PDF anexado hoje: <a id="e_pdfAtualLink" target="_blank" rel="noopener">abrir</a></div>
 
     <div class="section-label">Observações</div>
     <div class="field"><textarea id="e_observacao"></textarea></div>
@@ -369,6 +388,7 @@
     <button class="btn-limpar" onclick="limparEdicao()">✖ Cancelar</button>
     <button class="btn-excluir" id="btnExcluir" onclick="abrirModalExcluir()">🗑 Excluir Pedido</button>
   </div>
+  </div><!-- /estreito -->
 
   <!-- TABELA COMPLETA -->
   <div id="e_tabelaWrap" style="display:none;">
@@ -377,15 +397,7 @@
       <input class="tabela-filtro" id="e_filtro" placeholder="🔍 Filtrar por qualquer campo..." oninput="filtrarTabela()"/>
       <table id="e_tabela">
         <thead>
-          <tr>
-            <th>Nº Pedido</th>
-            <th>Cliente</th>
-            <th>Descrição</th>
-            <th>Status</th>
-            <th>Previsão</th>
-            <th>NF</th>
-            <th></th>
-          </tr>
+          <tr id="e_cabecalho"></tr>
         </thead>
         <tbody id="e_tabelaBody"></tbody>
       </table>
@@ -401,7 +413,7 @@
   <div class="modal-box">
     <div class="modal-title">⚠️ Excluir Pedido</div>
     <div class="modal-sub">Você está prestes a excluir o pedido <span id="modalPedidoInfo"></span>. Esta ação não pode ser desfeita.<br/><br/>Digite <span>EXCLUIR</span> para confirmar:</div>
-    <input class="modal-input" id="modalConfirmInput" placeholder="EXCLUIR" oninput="validarExclusao(this.value)"/>
+    <input class="modal-input" id="modalConfirmInput" placeholder="EXCLUIR" autocomplete="off" oninput="validarExclusao(this.value)"/>
     <div class="modal-btns">
       <button class="btn-cancelar-modal" onclick="fecharModalExcluir()">Cancelar</button>
       <button class="btn-confirmar-excluir" id="btnConfirmarExcluir" onclick="confirmarExclusao()">🗑 Excluir</button>
@@ -423,439 +435,605 @@
 </div>
 </div><!-- /appContent -->
 
+<!-- Menu do cabeçalho da tabela (ordenar e filtrar por coluna) -->
+<div class="col-menu" id="colMenu">
+  <button class="cm-ord" id="cmAsc" onclick="ordenarColuna(1)"></button>
+  <button class="cm-ord" id="cmDesc" onclick="ordenarColuna(-1)"></button>
+  <div class="cm-sep"></div>
+  <input class="cm-busca" id="cmBusca" placeholder="Pesquisar..." autocomplete="off" oninput="renderMenuLista()"/>
+  <div class="cm-links">
+    <button onclick="marcarVisiveis(true)">Selecionar tudo</button>
+    <button onclick="marcarVisiveis(false)">Limpar</button>
+  </div>
+  <div class="cm-lista" id="cmLista"></div>
+  <div class="cm-acoes">
+    <button class="cm-cancel" onclick="fecharMenuColuna()">Cancelar</button>
+    <button class="cm-ok" onclick="aplicarMenuColuna()">OK</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdIvso4Pvx9xcF5nGzKvUrZfuQgBgLqdOkazDVdJ73DCDgLApl35niDTgdMxOwOsbk/exec';
+const SUPABASE_URL  = 'https://vgcwzfeucfkaawwwhvjo.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnY3d6ZmV1Y2ZrYWF3d3dodmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDMyNzEsImV4cCI6MjEwNDY3OTI3MX0.ej6C2X0If1wLBRa4DoX_P2Z8-32IwZoN-AlcWKpM6RY';
 
+// O ADM entra só com um código. Por baixo existe UMA conta no Supabase, e o
+// código é a senha dela: quem confere é o servidor, nada fica escrito aqui.
+// Este e-mail não é segredo e ninguém o digita — é só o nome da conta.
+const CONTA_ADM = 'comercial5@mrinox.com.br';
+
+const TABELA  = 'rastreio_pedidos';
+const BUCKET  = 'rastreio-nf';
+const PDF_MAX = 10 * 1024 * 1024; // mesmo limite do bucket
+
+// "col" é a coluna de data no banco. O status não é gravado: o banco calcula
+// pela etapa mais avançada que tem data.
 const ETAPAS = [
-  {key:'producao',    icon:'⚙️', nome:'Processo de Produção'},
-  {key:'agendado',    icon:'📅', nome:'Agendamento de Entrega'},
-  {key:'pronto',      icon:'📦', nome:'Pedido Pronto'},
-  {key:'em transito', icon:'🚚', nome:'Saída em Rota'},
-  {key:'entregue',    icon:'✅', nome:'Entregue'},
+  {key:'producao', col:'producao_em', icon:'⚙️', nome:'Processo de Produção'},
+  {key:'agendado', col:'agendado_em', icon:'📅', nome:'Agendamento de Entrega'},
+  {key:'pronto',   col:'pronto_em',   icon:'📦', nome:'Pedido Pronto'},
+  {key:'transito', col:'transito_em', icon:'🚚', nome:'Saída em Rota'},
+  {key:'entregue', col:'entregue_em', icon:'✅', nome:'Entregue'},
 ];
+const CAMPOS_TEXTO = ['numero','cliente','descricao','localizacao','recebido_por',
+                      'transportadora','motorista','telefone','nota_fiscal','observacao'];
 
-let pdfBase64 = {n:'', e:''};
-let pdfNome   = {n:'', e:''};
-let linhaEdicao = -1;
-
-// ── Abas ─────────────────────────────────────────────
+let sb = null;
+let pdfArquivo = {n:null, e:null};
+let pedidoEdicao = null;      // a linha inteira que está aberta na edição
 let todosOsPedidos = [];
 
+const $ = id => document.getElementById(id);
+const p2 = n => String(n).padStart(2, '0');
+const norm = s => String(s == null ? '' : s).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function el(tag, cls, txt){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = txt;
+  return e;
+}
+
+// ── Datas ─────────────────────────────────────────────
+// O campo datetime-local trabalha no horário do aparelho; o banco guarda o
+// instante exato. Estas duas funções fazem a ida e a volta.
+function paraCampo(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+function doCampo(v){
+  const d = new Date(v);
+  return isNaN(d) ? null : d.toISOString();
+}
+function fmtData(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+// Dia em que o pedido foi lançado, no horário do aparelho.
+function fmtDia(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+// A data de lançamento mora em criado_em, que é um instante completo. O campo
+// da tela só mostra o dia: estas funções convertem sem perder a hora original,
+// que é o que mantém a ordem dos pedidos lançados no mesmo dia.
+function diaCampo(quando){
+  const d = new Date(quando);
+  return isNaN(d) ? '' : `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+}
+const hojeCampo = () => diaCampo(new Date());
+function instanteNoDia(dia, horaDe){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dia);
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3], horaDe.getHours(), horaDe.getMinutes(), horaDe.getSeconds(), horaDe.getMilliseconds());
+  return isNaN(d) ? null : d.toISOString();
+}
+
+// ── Abas ─────────────────────────────────────────────
 function trocarAba(aba) {
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (aba==='novo'&&i===0)||(aba==='editar'&&i===1)));
-  document.getElementById('pageNovo').classList.toggle('active', aba==='novo');
-  document.getElementById('pageEditar').classList.toggle('active', aba==='editar');
+  $('pageNovo').classList.toggle('active', aba==='novo');
+  $('pageEditar').classList.toggle('active', aba==='editar');
   if (aba === 'editar') carregarTabela();
 }
 
-// ── Monta grade de status ─────────────────────────────
-function montarStatusGrid(containerId, prefix, dadosAtivos) {
-  const container = document.getElementById(containerId);
+// ── Monta grade de etapas ─────────────────────────────
+function montarStatusGrid(containerId, prefix, pedido) {
+  const container = $(containerId);
   container.innerHTML = '';
   ETAPAS.forEach(et => {
-    const ativo = dadosAtivos && dadosAtivos[et.key];
-    const dataVal = dadosAtivos && dadosAtivos[et.key+'_data'] ? dadosAtivos[et.key+'_data'] : '';
-    const row = document.createElement('div');
-    row.className = 'status-row' + (ativo ? ' ativo' : '');
+    const valor = pedido ? paraCampo(pedido[et.col]) : '';
+    const ativo = !!valor;
+
+    const row = el('div', 'status-row' + (ativo ? ' ativo' : ''));
     row.id = `${prefix}_row_${et.key}`;
-    row.innerHTML = `
-      <input type="checkbox" class="status-check" id="${prefix}_chk_${et.key}"
-        ${ativo ? 'checked' : ''}
-        onchange="toggleStatus('${prefix}','${et.key}',this.checked)"/>
-      <span class="status-icon">${et.icon}</span>
-      <span class="status-nome">${et.nome}</span>
-      <div class="status-data">
-        <input type="text" id="${prefix}_data_${et.key}"
-          placeholder="DD/MM HH:MM"
-          value="${dataVal}"
-          ${!ativo ? 'disabled' : ''}/>
-      </div>`;
+
+    const chk = el('input', 'status-check');
+    chk.type = 'checkbox'; chk.id = `${prefix}_chk_${et.key}`; chk.checked = ativo;
+    chk.addEventListener('change', () => toggleStatus(prefix, et.key, chk.checked));
+
+    const dataWrap = el('div', 'status-data');
+    const dat = el('input');
+    dat.type = 'datetime-local'; dat.id = `${prefix}_data_${et.key}`;
+    dat.value = valor; dat.disabled = !ativo;
+    dataWrap.appendChild(dat);
+
+    row.appendChild(chk);
+    row.appendChild(el('span', 'status-icon', et.icon));
+    row.appendChild(el('span', 'status-nome', et.nome));
+    row.appendChild(dataWrap);
     container.appendChild(row);
   });
 }
 
 function toggleStatus(prefix, key, checked) {
-  const row = document.getElementById(`${prefix}_row_${key}`);
-  const dataInput = document.getElementById(`${prefix}_data_${key}`);
+  const row = $(`${prefix}_row_${key}`);
+  const dataInput = $(`${prefix}_data_${key}`);
   row.classList.toggle('ativo', checked);
   dataInput.disabled = !checked;
-  if (checked && !dataInput.value) {
-    dataInput.value = agora();
-  }
-  if (!checked) {
-    dataInput.value = '';
-  }
+  if (checked && !dataInput.value) dataInput.value = paraCampo(new Date().toISOString());
+  if (!checked) dataInput.value = '';
 
   // Ao marcar "Saída em Rota", marca "Pedido Pronto" se ainda não estiver marcado
-  if (key === 'em transito' && checked) {
-    const chkPronto = document.getElementById(`${prefix}_chk_pronto`);
-    const dataPronto = document.getElementById(`${prefix}_data_pronto`);
-    const rowPronto = document.getElementById(`${prefix}_row_pronto`);
+  if (key === 'transito' && checked) {
+    const chkPronto = $(`${prefix}_chk_pronto`);
     if (chkPronto && !chkPronto.checked) {
       chkPronto.checked = true;
-      rowPronto.classList.add('ativo');
+      $(`${prefix}_row_pronto`).classList.add('ativo');
+      const dataPronto = $(`${prefix}_data_pronto`);
       dataPronto.disabled = false;
       dataPronto.value = dataInput.value;
     }
   }
 }
 
-function agora() {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+// Devolve {producao_em: ISO|null, ...} ou null se alguma etapa marcada está sem data.
+function coletarEtapas(prefix) {
+  const r = {};
+  for (const et of ETAPAS) {
+    const chk = $(`${prefix}_chk_${et.key}`);
+    const dat = $(`${prefix}_data_${et.key}`);
+    if (!chk.checked) { r[et.col] = null; continue; }
+    const iso = dat.value ? doCampo(dat.value) : null;
+    if (!iso) { showToast(`Informe a data de "${et.nome}"`, 'err'); dat.focus(); return null; }
+    r[et.col] = iso;
+  }
+  return r;
 }
 
-// Inicializa grids
-montarStatusGrid('n_statusGrid', 'n', null);
-montarStatusGrid('e_statusGrid', 'e', null);
+function dadosDoForm(prefix) {
+  const d = {};
+  CAMPOS_TEXTO.forEach(c => { d[c] = $(`${prefix}_${c}`).value.trim(); });
+  d.previsao = $(`${prefix}_previsao`).value || null;
+  return d;
+}
 
 // ── PDF ───────────────────────────────────────────────
-function selecionarPDF(input, prefix) {
-  const file = input.files[0];
+function selecionarPDF(file, prefix) {
   if (!file) return;
-  pdfNome[prefix] = file.name;
-  const nameEl = document.getElementById(prefix + '_uploadName');
+  const ehPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  if (!ehPDF) { limparPDF(prefix); return showToast('Selecione um arquivo PDF', 'err'); }
+  if (file.size > PDF_MAX) { limparPDF(prefix); return showToast('PDF maior que 10 MB', 'err'); }
+  pdfArquivo[prefix] = file;
+  const nameEl = $(prefix + '_uploadName');
   nameEl.textContent = '✓ ' + file.name;
   nameEl.style.display = 'block';
   const match = file.name.match(/(\d{4,})/);
-  const nfInput = document.getElementById(prefix + '_notaFiscal');
+  const nfInput = $(prefix + '_nota_fiscal');
   if (match && !nfInput.value) nfInput.value = match[1];
-  const reader = new FileReader();
-  reader.onload = ev => { pdfBase64[prefix] = ev.target.result.split(',')[1]; };
-  reader.readAsDataURL(file);
+}
+
+function limparPDF(prefix) {
+  pdfArquivo[prefix] = null;
+  $(prefix + '_pdfInput').value = '';
+  const nameEl = $(prefix + '_uploadName');
+  nameEl.textContent = '';
+  nameEl.style.display = 'none';
 }
 
 ['n','e'].forEach(prefix => {
-  const area = document.getElementById(prefix + '_uploadArea');
+  const area = $(prefix + '_uploadArea');
   area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag'); });
   area.addEventListener('dragleave', () => area.classList.remove('drag'));
   area.addEventListener('drop', e => {
     e.preventDefault(); area.classList.remove('drag');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
-      selecionarPDF({files:[file]}, prefix);
-    }
+    selecionarPDF(e.dataTransfer.files[0], prefix);
   });
 });
 
-// ── Coleta dados de status ────────────────────────────
-function coletarStatus(prefix) {
-  const result = {};
-  ETAPAS.forEach(et => {
-    const chk = document.getElementById(`${prefix}_chk_${et.key}`);
-    const dat = document.getElementById(`${prefix}_data_${et.key}`);
-    if (chk.checked) {
-      result[et.key] = true;
-      result[et.key + '_data'] = dat.value;
-    }
-  });
-  return result;
+// O nome do arquivo é sorteado: o bucket abre por link, então o link não
+// pode ser adivinhável a partir do número do pedido ou da NF.
+function nomeAleatorio() {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return Array.from(b, x => x.toString(16).padStart(2, '0')).join('') + '.pdf';
 }
-
-// ── Gera histórico a partir dos status ───────────────
-function gerarHistorico(statusData) {
-  const ordem = ['entregue','em transito','pronto','agendado','producao'];
-  const linhas = [];
-  ordem.forEach(key => {
-    if (statusData[key] && statusData[key+'_data']) {
-      const nomes = {
-        'producao':'Produção iniciada',
-        'pronto':'Pedido pronto para embarque',
-        'agendado':'Agendamento de entrega',
-        'em transito':'Saída em rota',
-        'entregue':'Entregue ao cliente',
-      };
-      linhas.push(`${statusData[key+'_data']} - ${nomes[key]}`);
-    }
-  });
-  return linhas.join(' ');
+async function enviarPDF(file) {
+  const caminho = nomeAleatorio();
+  const { error } = await sb.storage.from(BUCKET).upload(caminho, file, {contentType:'application/pdf', upsert:false});
+  if (error) throw error;
+  return caminho;
 }
-
-// ── Status atual (último marcado) ────────────────────
-function statusAtual(statusData) {
-  const ordem = ['entregue','em transito','pronto','agendado','producao'];
-  for (const key of ordem) {
-    if (statusData[key]) return key.toUpperCase();
-  }
+// Limpeza de arquivo que ficou sem dono. Se falhar, sobra um PDF órfão no
+// bucket, o que não atrapalha ninguém — por isso o erro não sobe.
+async function apagarPDF(caminho) {
+  if (!caminho) return;
+  try { await sb.storage.from(BUCKET).remove([caminho]); } catch (e) {}
+}
+function linkNF(p) {
+  if (p.nf_arquivo) return sb.storage.from(BUCKET).getPublicUrl(p.nf_arquivo).data.publicUrl;
+  if (p.nf_link && /^https:\/\//i.test(p.nf_link.trim())) return p.nf_link.trim();
   return '';
 }
 
-// ── g() helper ───────────────────────────────────────
-function g(id) { return document.getElementById(id).value.trim(); }
+// ── Erros ─────────────────────────────────────────────
+function erroMsg(e) {
+  const m = (e && e.message) || '';
+  if (/failed to fetch|networkerror|load failed/i.test(m)) return 'Erro de conexão';
+  if ((e && (e.code === '42501' || e.code === 'PGRST301')) || /jwt|row-level security|permission denied/i.test(m))
+    return 'Acesso expirado. Saia e entre de novo.';
+  return m || 'Erro inesperado';
+}
+
+function ocupado(btn, texto) {
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>' + texto;
+}
 
 // ── SALVAR NOVO ───────────────────────────────────────
 async function salvarNovo() {
-  if (!g('n_numeroPedido')) return showToast('Preencha o Número do Pedido','err');
-  if (!g('n_cliente'))       return showToast('Preencha o Cliente','err');
-  const statusData = coletarStatus('n');
-  if (!Object.keys(statusData).length) return showToast('Selecione ao menos uma etapa','err');
+  const dados = dadosDoForm('n');
+  if (!dados.numero)  return showToast('Preencha o Número do Pedido','err');
+  if (!dados.cliente) return showToast('Preencha o Cliente','err');
+  const etapas = coletarEtapas('n');
+  if (!etapas) return;
+  if (!Object.values(etapas).some(Boolean)) return showToast('Selecione ao menos uma etapa','err');
+  const lanc = $('n_lancamento').value;
+  if (lanc > hojeCampo()) return showToast('A data de lançamento não pode ser no futuro','err');
 
-  const btn = document.getElementById('n_btnSalvar');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
-
-  const payload = {
-    acao: 'cadastrar',
-    numeroPedido:   g('n_numeroPedido'),
-    cliente:        g('n_cliente'),
-    descricao:      g('n_descricao'),
-    statusAtual:    statusAtual(statusData),
-    statusData:     statusData,
-    historico:      gerarHistorico(statusData),
-    previsao:       g('n_previsao'),
-    localizacao:    g('n_localizacao'),
-    recebidoPor:    g('n_recebidoPor'),
-    transportadora: g('n_transportadora'),
-    motorista:      g('n_motorista'),
-    telefone:       g('n_telefone'),
-    notaFiscal:     g('n_notaFiscal'),
-    observacao:     g('n_observacao'),
-    pdfBase64:      pdfBase64.n,
-    pdfNome:        pdfNome.n,
-  };
-
+  const btn = $('n_btnSalvar');
+  ocupado(btn, 'Salvando...');
+  let caminho = '';
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify(payload)});
-    const data = await res.json();
-    if (data.ok) { showToast('✅ Pedido salvo com sucesso!','ok'); limparNovo(); }
-    else showToast('❌ ' + (data.erro || 'Erro ao salvar'),'err');
-  } catch(e) {
-    showToast('❌ Erro de conexão','err');
+    // A mesma ordem pode ter várias entregas, então número repetido é permitido
+    // — mas nunca calado, para não entrar duplicado por engano.
+    const padrao = dados.numero.replace(/[\\%_]/g, '\\$&');
+    const { data: iguais, error: e0 } = await sb.from(TABELA).select('cliente,status').ilike('numero', padrao);
+    if (e0) throw e0;
+    if (iguais.length) {
+      const lista = iguais.slice(0, 5).map(p => '• ' + (p.cliente || '(sem cliente)') + ' — ' + (p.status || 'sem etapa')).join('\n');
+      const ok = confirm(`Já existe${iguais.length > 1 ? 'm ' + iguais.length + ' entregas' : ' 1 entrega'} com o número ${dados.numero}:\n\n${lista}\n\nCadastrar como OUTRA entrega do mesmo pedido?`);
+      if (!ok) return;
+    }
+
+    if (pdfArquivo.n) caminho = await enviarPDF(pdfArquivo.n);
+    const registro = {...dados, ...etapas, nf_arquivo: caminho};
+    // Lançado hoje: o relógio do banco marca a hora. Só vai data quando é retroativa.
+    if (lanc && lanc !== hojeCampo()) registro.criado_em = instanteNoDia(lanc, new Date());
+    const { error } = await sb.from(TABELA).insert(registro);
+    if (error) throw error;
+    caminho = '';
+    showToast('✅ Pedido salvo com sucesso!','ok');
+    limparNovo();
+  } catch (e) {
+    await apagarPDF(caminho);
+    showToast('❌ ' + erroMsg(e),'err');
   } finally {
     btn.disabled = false; btn.innerHTML = '💾 Salvar Pedido';
   }
 }
 
-// ── CARREGAR PEDIDO PARA EDIÇÃO ───────────────────────
+// ── TABELA E BUSCA ────────────────────────────────────
+// O Supabase devolve no máximo 1000 linhas por chamada; busca em páginas.
+async function buscarTodos() {
+  const PAG = 1000, tudo = [];
+  for (let i = 0; ; i += PAG) {
+    const { data, error } = await sb.from(TABELA).select('*')
+      .order('criado_em', {ascending:false}).order('id').range(i, i + PAG - 1);
+    if (error) throw error;
+    tudo.push(...data);
+    if (data.length < PAG) break;
+  }
+  return tudo;
+}
+
 async function carregarTabela() {
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {redirect:'follow'});
-    const rows = await res.json();
-    if (rows.error) throw new Error(rows.error);
-    todosOsPedidos = rows;
-    renderTabela(rows);
-    document.getElementById('e_tabelaWrap').style.display = 'block';
-  } catch(err) {
-    showToast('❌ Erro ao carregar tabela: ' + err.message,'err');
+    todosOsPedidos = await buscarTodos();
+    filtrarTabela();
+    $('e_tabelaWrap').style.display = 'block';
+    return true;
+  } catch (err) {
+    showToast('❌ Erro ao carregar tabela: ' + erroMsg(err),'err');
+    return false;
   }
 }
 
+function textoDeBusca(p) {
+  return norm([fmtDia(p.criado_em), p.numero, p.cliente, p.descricao, p.status, fmtData(p.previsao), p.nota_fiscal,
+               p.localizacao, p.recebido_por, p.transportadora, p.motorista, p.telefone, p.observacao].join(' '));
+}
+
+// ── Colunas da tabela: ordenar e filtrar pelo cabeçalho ──
+// "valor" é o que aparece na célula e na lista do filtro; "chave" é o que
+// decide a ordem (datas e status não se ordenam pelo texto).
+const ORDEM_STATUS = ['PRODUCAO','AGENDADO','PRONTO','EM TRANSITO','ENTREGUE'];
+const COLUNAS = [
+  {id:'lancamento', titulo:'Lançamento', data:true, valor:p => fmtDia(p.criado_em),   chave:p => Date.parse(p.criado_em) || 0},
+  {id:'numero',     titulo:'Nº Pedido',             valor:p => p.numero || '',        chave:p => p.numero || ''},
+  {id:'cliente',    titulo:'Cliente',               valor:p => p.cliente || '',       chave:p => p.cliente || ''},
+  {id:'descricao',  titulo:'Descrição',             valor:p => p.descricao || '',     chave:p => p.descricao || ''},
+  {id:'status',     titulo:'Status',                valor:p => p.status || '',        chave:p => ORDEM_STATUS.indexOf(p.status)},
+  {id:'previsao',   titulo:'Previsão',   data:true, valor:p => fmtData(p.previsao),   chave:p => Date.parse(p.previsao) || 0},
+  {id:'nf',         titulo:'NF',                    valor:p => p.nota_fiscal || '',   chave:p => p.nota_fiscal || ''},
+];
+let filtrosCol = {};    // id da coluna -> Set dos valores que ficam à mostra
+let ordenacao  = null;  // {col, dir}; null = ordem de lançamento, mais novo primeiro
+let menuCol    = null;  // coluna com o menu aberto
+let menuValores = [];   // [{v, qtd, chave, marcado}] do menu aberto
+
+function comparar(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b), 'pt-BR', {numeric:true, sensitivity:'base'});
+}
+
+// Linhas que passam na busca de texto e nos filtros de coluna. Com
+// "excetoCol", ignora o filtro dessa coluna — é o que o menu dela precisa.
+function linhasFiltradas(excetoCol) {
+  const termo = norm($('e_filtro').value);
+  return todosOsPedidos.filter(p =>
+    (!termo || textoDeBusca(p).includes(termo)) &&
+    COLUNAS.every(c => c.id === excetoCol || !filtrosCol[c.id] || filtrosCol[c.id].has(c.valor(p))));
+}
+
+function renderCabecalho() {
+  const tr = $('e_cabecalho');
+  tr.innerHTML = '';
+  COLUNAS.forEach(c => {
+    const th = el('th', filtrosCol[c.id] ? 'filtrada' : '');
+    th.dataset.col = c.id;
+    const box = el('div', 'th-in');
+    box.appendChild(el('span', '', c.titulo));
+    if (ordenacao && ordenacao.col === c.id) box.appendChild(el('span', 'th-seta', ordenacao.dir > 0 ? '▲' : '▼'));
+    box.appendChild(el('span', 'th-btn', '▼'));
+    th.appendChild(box);
+    th.addEventListener('click', () => abrirMenuColuna(c.id, th));
+    tr.appendChild(th);
+  });
+  tr.appendChild(el('th'));
+}
+
+function abrirMenuColuna(id, th) {
+  if (menuCol === id) return fecharMenuColuna();
+  const c = COLUNAS.find(x => x.id === id);
+  menuCol = id;
+
+  // Como na planilha: a lista traz os valores que sobram depois dos OUTROS filtros.
+  const cont = new Map();
+  linhasFiltradas(id).forEach(p => {
+    const v = c.valor(p);
+    const e = cont.get(v);
+    if (e) e.qtd++; else cont.set(v, {qtd:1, chave:c.chave(p)});
+  });
+  const ativo = filtrosCol[id];
+  menuValores = [...cont.entries()]
+    .map(([v, e]) => ({v, qtd:e.qtd, chave:e.chave, marcado: !ativo || ativo.has(v)}))
+    .sort((a, b) => (c.data ? -1 : 1) * comparar(a.chave, b.chave));
+
+  $('cmAsc').textContent  = c.data ? '▲  Mais antigo primeiro'  : '▲  Ordenar A → Z';
+  $('cmDesc').textContent = c.data ? '▼  Mais recente primeiro' : '▼  Ordenar Z → A';
+  $('cmAsc').classList.toggle('ativo',  !!ordenacao && ordenacao.col === id && ordenacao.dir > 0);
+  $('cmDesc').classList.toggle('ativo', !!ordenacao && ordenacao.col === id && ordenacao.dir < 0);
+  $('cmBusca').value = '';
+  renderMenuLista();
+
+  const m = $('colMenu');
+  m.classList.add('show');
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top  = (r.bottom + 4 + m.offsetHeight > innerHeight
+                   ? Math.max(8, innerHeight - m.offsetHeight - 8) : r.bottom + 4) + 'px';
+}
+
+function fecharMenuColuna() {
+  menuCol = null;
+  $('colMenu').classList.remove('show');
+}
+
+function valoresVisiveisNoMenu() {
+  const termo = norm($('cmBusca').value);
+  return termo ? menuValores.filter(x => norm(x.v || '(vazio)').includes(termo)) : menuValores;
+}
+
+function renderMenuLista() {
+  const lista = $('cmLista');
+  lista.innerHTML = '';
+  const vis = valoresVisiveisNoMenu();
+  if (!vis.length) { lista.appendChild(el('div', 'cm-vazio', 'Nada encontrado')); return; }
+  vis.forEach(x => {
+    const item = el('label', 'cm-item');
+    const chk = el('input'); chk.type = 'checkbox'; chk.checked = x.marcado;
+    chk.addEventListener('change', () => { x.marcado = chk.checked; });
+    item.appendChild(chk);
+    item.appendChild(el('span', 'v', x.v || '(Vazio)'));
+    item.appendChild(el('span', 'q', x.qtd));
+    lista.appendChild(item);
+  });
+}
+
+function marcarVisiveis(marcado) {
+  valoresVisiveisNoMenu().forEach(x => { x.marcado = marcado; });
+  renderMenuLista();
+}
+
+function aplicarMenuColuna() {
+  // Com pesquisa digitada vale só o que está à vista e marcado, como na planilha.
+  const pesquisando = !!norm($('cmBusca').value);
+  const escolhidos = (pesquisando ? valoresVisiveisNoMenu() : menuValores).filter(x => x.marcado).map(x => x.v);
+  if (!escolhidos.length) return showToast('Marque ao menos um valor', 'err');
+  if (!pesquisando && escolhidos.length === menuValores.length) delete filtrosCol[menuCol];
+  else filtrosCol[menuCol] = new Set(escolhidos);
+  fecharMenuColuna();
+  filtrarTabela();
+}
+
+function ordenarColuna(dir) {
+  ordenacao = {col: menuCol, dir};
+  fecharMenuColuna();
+  filtrarTabela();
+}
+
+function limparFiltros() {
+  filtrosCol = {};
+  ordenacao = null;
+  $('e_filtro').value = '';
+  fecharMenuColuna();
+  filtrarTabela();
+}
+
+document.addEventListener('mousedown', e => {
+  if (menuCol && !$('colMenu').contains(e.target) && !e.target.closest('th[data-col]')) fecharMenuColuna();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuCol) fecharMenuColuna(); });
+// O menu fica preso à tela; se a página rolar, ele se soltaria da coluna.
+window.addEventListener('scroll', e => { if (menuCol && !$('colMenu').contains(e.target)) fecharMenuColuna(); }, true);
+window.addEventListener('resize', () => { if (menuCol) fecharMenuColuna(); });
+
 async function carregarPedido() {
-  const busca = document.getElementById('e_busca').value.trim();
+  const busca = $('e_busca').value.trim();
+  $('e_filtro').value = busca;
+  if (!(await carregarTabela())) return;
+  if (!busca) return;
 
-  // Sem busca — só mostra/atualiza tabela
-  if (!busca) {
-    await carregarTabela();
-    return;
-  }
+  const b = norm(busca);
+  const exatos = todosOsPedidos.filter(p => norm(p.numero) === b || norm(p.nota_fiscal) === b);
+  if (exatos.length === 1) return selecionarPedido(exatos[0].id);
+  if (exatos.length > 1) return showToast(`${exatos.length} entregas com esse número — escolha na tabela`,'info');
+  showToast('Pedido não encontrado — veja os resultados na tabela','info');
+}
 
-  showToast('🔍 Buscando...','info');
+function classeStatus(s) {
+  return {'ENTREGUE':'b-entregue','EM TRANSITO':'b-transito','PRONTO':'b-pronto',
+          'AGENDADO':'b-agendado','PRODUCAO':'b-producao'}[s] || 'b-default';
+}
 
-  try {
-    // Usa dados já carregados se disponíveis
-    let rows = todosOsPedidos;
-    if (!rows.length) {
-      const res = await fetch(APPS_SCRIPT_URL, {redirect:'follow'});
-      rows = await res.json();
-      if (rows.error) throw new Error(rows.error);
-      todosOsPedidos = rows;
-    }
-
-    const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const buscaN = n(busca);
-    const pedido = rows.find(r =>
-      n(r['numero do pedido']||'') === buscaN ||
-      n(r['nota fiscal']||'') === buscaN
-    );
-
-    // Filtra tabela com o termo buscado
-    const filtrados = rows.filter(r =>
-      Object.values(r).some(v => n(v).includes(buscaN))
-    );
-    renderTabela(filtrados);
-    document.getElementById('e_tabelaWrap').style.display = 'block';
-    document.getElementById('e_filtro').value = busca;
-
-    if (!pedido) return showToast('Pedido não encontrado — veja os resultados na tabela','info');
-
-    preencherFormEdicao(pedido, rows.indexOf(pedido) + 2);
-    document.getElementById('e_form').style.display = 'block';
-    showToast('✅ Pedido carregado!','ok');
-
-  } catch(err) {
-    showToast('❌ Erro: ' + err.message,'err');
+function renderInfo(qtd) {
+  const info = $('e_tabelaInfo');
+  info.textContent = `${qtd} de ${todosOsPedidos.length} pedido${todosOsPedidos.length!==1?'s':''}`;
+  const filtradas = COLUNAS.filter(c => filtrosCol[c.id]).map(c => c.titulo);
+  if (filtradas.length) info.appendChild(document.createTextNode(' · filtrando por ' + filtradas.join(', ')));
+  if (filtradas.length || ordenacao || $('e_filtro').value) {
+    const b = el('button', '', 'Limpar filtros');
+    b.addEventListener('click', limparFiltros);
+    info.appendChild(b);
   }
 }
 
 function renderTabela(rows) {
-  const tbody = document.getElementById('e_tabelaBody');
-  const info  = document.getElementById('e_tabelaInfo');
+  const tbody = $('e_tabelaBody');
+  tbody.innerHTML = '';
+  renderInfo(rows.length);
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Nenhum pedido encontrado</td></tr>';
-    info.textContent = '';
+    const tr = el('tr'); const td = el('td', 'tabela-vazia', 'Nenhum pedido encontrado');
+    td.colSpan = COLUNAS.length + 1; tr.appendChild(td); tbody.appendChild(tr);
     return;
   }
 
-  const statusClass = s => {
-    s = (s||'').toLowerCase();
-    if (s.includes('entregue')||s.includes('estregue')) return 'b-entregue';
-    if (s.includes('transito')||s.includes('rota')) return 'b-transito';
-    if (s.includes('pronto')) return 'b-pronto';
-    if (s.includes('agendado')) return 'b-agendado';
-    if (s.includes('producao')||s.includes('produção')) return 'b-producao';
-    return 'b-default';
-  };
-
-  tbody.innerHTML = rows.map((r, i) => {
-    const np  = r['numero do pedido'] || '';
-    const cli = r['cliente'] || '';
-    const desc= r['descricao'] || '';
-    const st  = r['status'] || '';
-    let prev = r['previsao de entrega'] || '';
-    if (prev.includes('GMT') || prev.includes('00:00:00')) {
-      try {
-        const d = new Date(prev);
-        if (!isNaN(d)) prev = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
-      } catch(e) {}
-    }
-    const nf  = r['nota fiscal'] || '';
-    const sc  = statusClass(st);
-    return `<tr onclick="selecionarLinha(${todosOsPedidos.indexOf(r)})">
-      <td>${np}</td>
-      <td>${cli}</td>
-      <td>${desc}</td>
-      <td class="badge-cel"><span class="${sc}">${st}</span></td>
-      <td>${prev}</td>
-      <td>${nf}</td>
-      <td><button class="btn-editar-linha" onclick="event.stopPropagation();selecionarLinha(${todosOsPedidos.indexOf(r)})">✏️ Editar</button></td>
-    </tr>`;
-  }).join('');
-
-  info.textContent = `${rows.length} pedido${rows.length!==1?'s':''} encontrado${rows.length!==1?'s':''}`;
-}
-
-function selecionarLinha(idx) {
-  const pedido = todosOsPedidos[idx];
-  if (!pedido) return;
-  preencherFormEdicao(pedido, idx + 2);
-  document.getElementById('e_form').style.display = 'block';
-  document.querySelectorAll('#e_tabelaBody tr').forEach((tr,i) => tr.classList.toggle('selecionada', i === todosOsPedidos.indexOf(pedido) - (todosOsPedidos.length - document.querySelectorAll('#e_tabelaBody tr').length)));
-  document.getElementById('e_form').scrollIntoView({behavior:'smooth'});
-  showToast('✅ Pedido carregado!','ok');
+  rows.forEach(p => {
+    const tr = el('tr', pedidoEdicao && pedidoEdicao.id === p.id ? 'selecionada' : '');
+    tr.dataset.id = p.id;
+    tr.appendChild(el('td', '', fmtDia(p.criado_em)));
+    tr.appendChild(el('td', '', p.numero));
+    tr.appendChild(el('td', '', p.cliente));
+    tr.appendChild(el('td', '', p.descricao));
+    const tdSt = el('td', 'badge-cel');
+    tdSt.appendChild(el('span', classeStatus(p.status), p.status || '—'));
+    tr.appendChild(tdSt);
+    tr.appendChild(el('td', '', fmtData(p.previsao)));
+    tr.appendChild(el('td', '', p.nota_fiscal));
+    const tdBtn = el('td');
+    tdBtn.appendChild(el('button', 'btn-editar-linha', '✏️ Editar'));
+    tr.appendChild(tdBtn);
+    tr.addEventListener('click', () => selecionarPedido(p.id));
+    tbody.appendChild(tr);
+  });
 }
 
 function filtrarTabela() {
-  const termo = document.getElementById('e_filtro').value.trim();
-  const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const termoN = n(termo);
-  const filtrados = termoN
-    ? todosOsPedidos.filter(r => Object.values(r).some(v => n(v).includes(termoN)))
-    : todosOsPedidos;
-  renderTabela(filtrados);
+  const rows = linhasFiltradas();
+  if (ordenacao) {
+    const c = COLUNAS.find(x => x.id === ordenacao.col);
+    rows.sort((a, b) => ordenacao.dir * comparar(c.chave(a), c.chave(b)));
+  }
+  renderCabecalho();
+  renderTabela(rows);
 }
 
-function preencherFormEdicao(p, linha) {
-  linhaEdicao = linha;
+function selecionarPedido(id) {
+  const pedido = todosOsPedidos.find(p => p.id === id);
+  if (!pedido) return;
+  preencherFormEdicao(pedido);
+  $('e_form').style.display = 'block';
+  document.querySelectorAll('#e_tabelaBody tr').forEach(tr => tr.classList.toggle('selecionada', tr.dataset.id === id));
+  $('e_form').scrollIntoView({behavior:'smooth'});
+  showToast('✅ Pedido carregado!','ok');
+}
 
-  const n = s => s.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const pn = {};
-  Object.keys(p).forEach(k => { pn[n(k)] = p[k]; });
+function preencherFormEdicao(p) {
+  pedidoEdicao = p;
+  CAMPOS_TEXTO.forEach(c => { $('e_' + c).value = p[c] || ''; });
+  $('e_previsao').value = p.previsao || '';
+  $('e_lancamento').value = diaCampo(p.criado_em);
+  montarStatusGrid('e_statusGrid', 'e', p);
 
-  document.getElementById('e_numeroPedido').value  = pn['numero do pedido'] || '';
-  document.getElementById('e_cliente').value        = pn['cliente'] || '';
-  document.getElementById('e_descricao').value      = pn['descricao'] || '';
-  const prevRaw = pn['previsao de entrega'] || '';
-    // Remove formato de data longo do Google Sheets
-    let prevLimpa = prevRaw;
-    if (prevRaw.includes('GMT') || prevRaw.includes('00:00:00')) {
-      try {
-        const d = new Date(prevRaw);
-        if (!isNaN(d)) {
-          prevLimpa = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
-        }
-      } catch(e) { prevLimpa = prevRaw; }
-    }
-    document.getElementById('e_previsao').value = prevLimpa;
-  document.getElementById('e_localizacao').value    = pn['localizacao atual'] || '';
-  document.getElementById('e_recebidoPor').value    = pn['recebido por'] || '';
-  document.getElementById('e_transportadora').value = pn['transportadora'] || '';
-  document.getElementById('e_motorista').value      = pn['motorista'] || '';
-  document.getElementById('e_telefone').value       = pn['telefone'] || '';
-  document.getElementById('e_notaFiscal').value     = pn['nota fiscal'] || '';
-  document.getElementById('e_observacao').value     = pn['observacao'] || pn['observaçao'] || '';
-
-  // Reconstrói status a partir do histórico
-  const hist = pn['historico'] || '';
-  const dadosAtivos = {};
-  const mapaNomes = {
-    'producao iniciada':'producao','producao':'producao',
-    'pedido pronto':'pronto','pronto':'pronto',
-    'agendamento':'agendado','agendado':'agendado',
-    'saida em rota':'em transito','em transito':'em transito','transito':'em transito',
-    'entregue':'entregue','entregue ao cliente':'entregue',
-  };
-
-  if (hist) {
-    const partes = hist.split(/(?=\d{2}\/\d{2}(?:\s\d{2}:\d{2})?\s*-)/);
-    partes.forEach(item => {
-      item = item.trim();
-      if (!item) return;
-      const sep = item.indexOf(' - ');
-      if (sep === -1) return;
-      const data = item.substring(0, sep).trim();
-      const desc = item.substring(sep+3).trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      for (const [nome, key] of Object.entries(mapaNomes)) {
-        if (desc.includes(nome)) {
-          dadosAtivos[key] = true;
-          dadosAtivos[key+'_data'] = data;
-          break;
-        }
-      }
-    });
-  }
-
-  montarStatusGrid('e_statusGrid', 'e', dadosAtivos);
+  // PDF escolhido para outro pedido não pode vir junto para este.
+  limparPDF('e');
+  const link = linkNF(p);
+  $('e_pdfAtual').style.display = link ? 'block' : 'none';
+  if (link) $('e_pdfAtualLink').href = link; else $('e_pdfAtualLink').removeAttribute('href');
 }
 
 // ── SALVAR EDIÇÃO ─────────────────────────────────────
 async function salvarEdicao() {
-  if (linhaEdicao < 0) return showToast('Carregue um pedido primeiro','err');
-  const statusData = coletarStatus('e');
+  if (!pedidoEdicao) return showToast('Carregue um pedido primeiro','err');
+  const dados = dadosDoForm('e');
+  if (!dados.numero) return showToast('Preencha o Número do Pedido','err');
+  const etapas = coletarEtapas('e');
+  if (!etapas) return;
+  const lanc = $('e_lancamento').value;
+  if (lanc > hojeCampo()) return showToast('A data de lançamento não pode ser no futuro','err');
 
-  const btn = document.getElementById('e_btnSalvar');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
-
-  const payload = {
-    acao: 'editar',
-    linha: linhaEdicao,
-    numeroPedido:   g('e_numeroPedido'),
-    cliente:        g('e_cliente'),
-    descricao:      g('e_descricao'),
-    statusAtual:    statusAtual(statusData),
-    statusData:     statusData,
-    historico:      gerarHistorico(statusData),
-    previsao:       g('e_previsao'),
-    localizacao:    g('e_localizacao'),
-    recebidoPor:    g('e_recebidoPor'),
-    transportadora: g('e_transportadora'),
-    motorista:      g('e_motorista'),
-    telefone:       g('e_telefone'),
-    notaFiscal:     g('e_notaFiscal'),
-    observacao:     g('e_observacao'),
-    pdfBase64:      pdfBase64.e,
-    pdfNome:        pdfNome.e,
-  };
-
+  const btn = $('e_btnSalvar');
+  ocupado(btn, 'Salvando...');
+  const antigo = pedidoEdicao.nf_arquivo || '';
+  let novo = '';
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify(payload)});
-    const data = await res.json();
-    if (data.ok) { showToast('✅ Pedido atualizado!','ok'); limparEdicao(); }
-    else showToast('❌ ' + (data.erro || 'Erro ao salvar'),'err');
-  } catch(e) {
-    showToast('❌ Erro de conexão','err');
+    if (pdfArquivo.e) novo = await enviarPDF(pdfArquivo.e);
+    const mudancas = {...dados, ...etapas};
+    if (novo) { mudancas.nf_arquivo = novo; mudancas.nf_link = ''; }
+    // Só mexe no lançamento se o dia mudou; a hora original é preservada.
+    if (lanc && lanc !== diaCampo(pedidoEdicao.criado_em))
+      mudancas.criado_em = instanteNoDia(lanc, new Date(pedidoEdicao.criado_em));
+
+    // Pelo id, nunca pela posição na lista: se outra pessoa incluiu ou
+    // excluiu pedidos nesse meio tempo, a alteração continua caindo no certo.
+    const { data, error } = await sb.from(TABELA).update(mudancas).eq('id', pedidoEdicao.id).select('id');
+    if (error) throw error;
+    if (!data.length) throw new Error('Este pedido não existe mais — foi excluído por outra pessoa.');
+
+    if (novo) await apagarPDF(antigo);
+    novo = '';
+    showToast('✅ Pedido atualizado!','ok');
+    limparEdicao();
+    await carregarTabela();
+  } catch (e) {
+    await apagarPDF(novo);
+    showToast('❌ ' + erroMsg(e),'err');
   } finally {
     btn.disabled = false; btn.innerHTML = '💾 Salvar Alterações';
   }
@@ -863,225 +1041,155 @@ async function salvarEdicao() {
 
 // ── Limpar ────────────────────────────────────────────
 function limparNovo() {
-  ['n_numeroPedido','n_cliente','n_descricao','n_previsao','n_localizacao',
-   'n_recebidoPor','n_transportadora','n_motorista','n_telefone','n_notaFiscal','n_observacao']
-    .forEach(id => document.getElementById(id).value = '');
-  pdfBase64.n = ''; pdfNome.n = '';
-  document.getElementById('n_pdfInput').value = '';
-  document.getElementById('n_uploadName').style.display = 'none';
+  CAMPOS_TEXTO.forEach(c => { $('n_' + c).value = ''; });
+  $('n_previsao').value = '';
+  $('n_lancamento').value = hojeCampo();
+  limparPDF('n');
   montarStatusGrid('n_statusGrid', 'n', null);
 }
 
 function limparEdicao() {
-  document.getElementById('e_busca').value = '';
-  document.getElementById('e_form').style.display = 'none';
-  pdfBase64.e = ''; pdfNome.e = '';
-  linhaEdicao = -1;
+  $('e_busca').value = '';
+  $('e_form').style.display = 'none';
+  $('e_pdfAtual').style.display = 'none';
+  limparPDF('e');
+  pedidoEdicao = null;
+  document.querySelectorAll('#e_tabelaBody tr.selecionada').forEach(tr => tr.classList.remove('selecionada'));
 }
 
 // ── Toast ─────────────────────────────────────────────
+let toastTimer = null;
 function showToast(msg, tipo) {
-  const t = document.getElementById('toast');
+  const t = $('toast');
   t.textContent = msg;
   t.className = 'toast ' + tipo + ' show';
-  setTimeout(() => t.className = 'toast ' + tipo, 3200);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast ' + tipo, tipo === 'err' ? 5000 : 3200);
 }
 
 // ── Exclusão ──────────────────────────────────────────
 function abrirModalExcluir() {
-  if (linhaEdicao < 0) return showToast('Carregue um pedido primeiro', 'err');
-  const numPed = g('e_numeroPedido');
-  const cliente = g('e_cliente');
-  document.getElementById('modalPedidoInfo').textContent = `Nº ${numPed} — ${cliente}`;
-  document.getElementById('modalConfirmInput').value = '';
-  document.getElementById('btnConfirmarExcluir').classList.remove('ativo');
-  document.getElementById('modalExcluir').classList.add('show');
+  if (!pedidoEdicao) return showToast('Carregue um pedido primeiro', 'err');
+  $('modalPedidoInfo').textContent = `Nº ${pedidoEdicao.numero} — ${pedidoEdicao.cliente}`;
+  $('modalConfirmInput').value = '';
+  $('btnConfirmarExcluir').classList.remove('ativo');
+  $('modalExcluir').classList.add('show');
 }
 
 function fecharModalExcluir() {
-  document.getElementById('modalExcluir').classList.remove('show');
+  $('modalExcluir').classList.remove('show');
 }
 
 function validarExclusao(val) {
-  const btn = document.getElementById('btnConfirmarExcluir');
-  btn.classList.toggle('ativo', val.trim().toUpperCase() === 'EXCLUIR');
+  $('btnConfirmarExcluir').classList.toggle('ativo', val.trim().toUpperCase() === 'EXCLUIR');
 }
 
 async function confirmarExclusao() {
-  if (linhaEdicao < 0) return;
+  if (!pedidoEdicao) return;
   fecharModalExcluir();
 
-  const btn = document.getElementById('e_btnSalvar');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Excluindo...';
-
+  const btn = $('btnExcluir');
+  ocupado(btn, 'Excluindo...');
   try {
-    const payload = { acao: 'excluir', linha: linhaEdicao };
-    const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const data = await res.json();
-    if (data.ok) {
-      showToast('✅ Pedido excluído com sucesso!', 'ok');
-      limparEdicao();
-      await carregarTabela();
-    } else {
-      showToast('❌ ' + (data.erro || 'Erro ao excluir'), 'err');
-    }
-  } catch(e) {
-    showToast('❌ Erro de conexão', 'err');
+    const { data, error } = await sb.from(TABELA).delete().eq('id', pedidoEdicao.id).select('nf_arquivo');
+    if (error) throw error;
+    if (data.length) await apagarPDF(data[0].nf_arquivo);
+    showToast(data.length ? '✅ Pedido excluído com sucesso!' : 'Este pedido já tinha sido excluído', data.length ? 'ok' : 'info');
+    limparEdicao();
+    await carregarTabela();
+  } catch (e) {
+    showToast('❌ ' + erroMsg(e), 'err');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '💾 Salvar Alterações';
+    btn.disabled = false; btn.innerHTML = '🗑 Excluir Pedido';
   }
 }
 
-// ── Biometria (WebAuthn) ───────────────────────────────
-const BIO_KEY = 'rodriaco_bio';
-const BIO_TOGGLE_KEY = 'rodriaco_bio_toggle';
-
-function isMobile() {
-  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-}
-
-async function verificarSuporteBiometria() {
-  try {
-    if (!isMobile()) return false; // PC → sem biometria
-    if (!window.PublicKeyCredential) return false;
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  } catch(e) { return false; }
-}
-
-function salvarToggleBio(ativado) {
-  localStorage.setItem(BIO_TOGGLE_KEY, ativado ? '1' : '0');
-  if (!ativado) {
-    localStorage.removeItem(BIO_KEY);
-    showToast('🔐 Biometria desativada', 'info');
-  }
-}
-
-async function ativarBiometria() {
-  try {
-    showToast('🔐 Registrando biometria...', 'info');
-    const credencial = await navigator.credentials.create({
-      publicKey: {
-        challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rp: { name: 'Rodriaço Gestão', id: location.hostname },
-        user: {
-          id: new TextEncoder().encode(USUARIO),
-          name: USUARIO,
-          displayName: 'Rodriaço'
-        },
-        pubKeyCredParams: [
-          { alg: -7, type: 'public-key' },
-          { alg: -257, type: 'public-key' }
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required',
-          residentKey: 'preferred'
-        },
-        timeout: 60000
-      }
-    });
-    if (credencial) {
-      localStorage.setItem(BIO_KEY, JSON.stringify({
-        id: Array.from(new Uint8Array(credencial.rawId)),
-        ativado: true
-      }));
-      showToast('🔐 Biometria ativada! Próximos acessos serão automáticos.', 'ok');
-    }
-  } catch(e) {
-    document.getElementById('bioToggle').checked = false;
-    localStorage.setItem(BIO_TOGGLE_KEY, '0');
-    localStorage.removeItem(BIO_KEY);
-    showToast('⚠️ Biometria não disponível neste dispositivo.', 'err');
-  }
-}
-
-async function tentarLoginBiometrico() {
-  try {
-    const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
-    if (!bioData.ativado || !bioData.id) return;
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge: crypto.getRandomValues(new Uint8Array(32)),
-        allowCredentials: [{ id: new Uint8Array(bioData.id), type: 'public-key', transports: ['internal'] }],
-        userVerification: 'required',
-        timeout: 60000
-      }
-    });
-    if (assertion) {
-      sessionStorage.setItem(SESS_KEY, '1');
-      mostrarApp();
-    }
-  } catch(e) {
-    // Falhou → fica na tela de login normal, sem mensagem
-  }
-}
-
-async function verificarBiometriaDisponivel() {
-  const suporte = await verificarSuporteBiometria();
-  const toggleWrap = document.querySelector('.bio-toggle-wrap');
-
-  if (!suporte) {
-    if (toggleWrap) toggleWrap.style.display = 'none';
-    return;
-  }
-
-  // Restaura estado do toggle
-  const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
-  document.getElementById('bioToggle').checked = toggleAtivo;
-
-  // Se toggle ligado e biometria registrada → tenta login automático
-  const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
-  if (toggleAtivo && bioData.ativado && bioData.id) {
-    tentarLoginBiometrico();
-  }
-}
-
-// ── Login ─────────────────────────────────────────────
-const USUARIO = 'rodriaco';
-const SENHA   = 'qwe@123';
-const SESS_KEY = 'rodriaco_auth';
-
-function verificarLogin() {
-  if (sessionStorage.getItem(SESS_KEY) === '1') {
-    mostrarApp();
-  }
-}
-
-async function fazerLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const s = document.getElementById('loginSenha').value;
-  if (u === USUARIO && s === SENHA) {
-    sessionStorage.setItem(SESS_KEY, '1');
-    mostrarApp();
-
-    // Se toggle de biometria estiver ligado e ainda não registrado, registra agora
-    if (isMobile()) {
-      const toggleAtivo = localStorage.getItem(BIO_TOGGLE_KEY) === '1';
-      const bioData = JSON.parse(localStorage.getItem(BIO_KEY) || '{}');
-      if (toggleAtivo && (!bioData.ativado || !bioData.id)) {
-        setTimeout(() => ativarBiometria(), 800);
-      }
-    }
-
-
-  } else {
-    const err = document.getElementById('loginErr');
-    err.textContent = 'Usuário ou senha incorretos';
-    document.getElementById('loginSenha').value = '';
-    setTimeout(() => err.textContent = '', 3000);
-  }
+// ── Entrada por código ────────────────────────────────
+function mostrarLogin(msg) {
+  $('appContent').style.display = 'none';
+  $('loginScreen').style.display = 'flex';
+  $('loginAguarde').style.display = 'none';
+  $('loginForm').style.display = 'block';
+  $('loginCodigo').value = '';
+  $('loginErr').textContent = msg || '';
 }
 
 function mostrarApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appContent').style.display = 'block';
+  $('loginScreen').style.display = 'none';
+  $('appContent').style.display = 'block';
 }
 
-// Verifica login ao carregar
-verificarLogin();
-verificarBiometriaDisponivel();
+// Entrar na conta não basta: o banco ainda confere se ela está liberada
+// para o rastreio. Sem isso as telas abririam vazias e sem explicação.
+async function conferirAcesso() {
+  const { data, error } = await sb.rpc('rastreio_pode');
+  if (error) throw error;
+  return data === true;
+}
+
+async function entrar() {
+  const codigo = $('loginCodigo').value;
+  if (!codigo) return;
+  const btn = $('loginBtn');
+  ocupado(btn, 'Entrando...');
+  $('loginErr').textContent = '';
+  try {
+    const { error } = await sb.auth.signInWithPassword({email: CONTA_ADM, password: codigo});
+    if (error) {
+      if (error.status === 429) throw new Error('Muitas tentativas. Aguarde um minuto e tente de novo.');
+      if (error.status === 400) throw new Error('Código incorreto');
+      throw error;
+    }
+    if (!(await conferirAcesso())) {
+      await sb.auth.signOut({scope:'local'});
+      throw new Error('Este acesso não está liberado para o rastreio.');
+    }
+    $('loginCodigo').value = '';
+    mostrarApp();
+  } catch (e) {
+    $('loginCodigo').value = '';
+    $('loginErr').textContent = erroMsg(e);
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'Entrar';
+  }
+}
+
+// scope 'local': sai só neste aparelho. O padrão do Supabase derrubaria
+// todo mundo, porque a conta é a mesma para todos.
+async function sair() {
+  try { await sb.auth.signOut({scope:'local'}); } catch (e) {}
+  limparEdicao();
+  todosOsPedidos = [];
+  mostrarLogin();
+}
+
+async function iniciar() {
+  $('n_lancamento').value = hojeCampo();
+  montarStatusGrid('n_statusGrid', 'n', null);
+  montarStatusGrid('e_statusGrid', 'e', null);
+
+  if (!window.supabase) {
+    mostrarLogin('Não foi possível carregar o app. Verifique a internet e recarregue a página.');
+    $('loginBtn').disabled = true;
+    return;
+  }
+  // storageKey próprio: o rastreio público mora no mesmo endereço do GitHub
+  // Pages e não pode enxergar nem herdar esta sessão.
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {storageKey:'rastreio-adm-auth', persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}
+  });
+  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') mostrarLogin(); });
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && await conferirAcesso()) return mostrarApp();
+    if (session) await sb.auth.signOut({scope:'local'});
+    mostrarLogin();
+  } catch (e) {
+    mostrarLogin(erroMsg(e));
+  }
+}
+iniciar();
 
 // ── PWA Service Worker ────────────────────────────────
 if ('serviceWorker' in navigator) {
@@ -1101,7 +1209,7 @@ const BANNER_KEY = 'rodriaco_banner_fechado';
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  
+
   // Só mostra se usuário não fechou antes
   if (!sessionStorage.getItem(BANNER_KEY)) {
     setTimeout(() => mostrarBanner('android'), 2000);
@@ -1119,11 +1227,11 @@ function isEmStandaloneMode() {
 
 function mostrarBanner(tipo) {
   if (isEmStandaloneMode()) return; // já está instalado
-  
-  const banner = document.getElementById('installBanner');
-  const sub = document.getElementById('installSub');
-  const btnInstall = document.getElementById('btnInstall');
-  
+
+  const banner = $('installBanner');
+  const sub = $('installSub');
+  const btnInstall = $('btnInstall');
+
   if (tipo === 'ios') {
     sub.innerHTML = 'Toque em <span>⎦ Compartilhar</span> → <span>"Adicionar à Tela"</span>';
     btnInstall.style.display = 'none';
@@ -1131,16 +1239,16 @@ function mostrarBanner(tipo) {
     sub.textContent = 'Adicione à sua tela inicial com 1 toque';
     btnInstall.style.display = '';
   }
-  
+
   banner.classList.add('show');
 }
 
 function fecharBanner() {
-  document.getElementById('installBanner').classList.remove('show');
+  $('installBanner').classList.remove('show');
   sessionStorage.setItem(BANNER_KEY, '1');
 }
 
-document.getElementById('btnInstall').addEventListener('click', async () => {
+$('btnInstall').addEventListener('click', async () => {
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
   const { outcome } = await deferredPrompt.userChoice;
@@ -1158,7 +1266,6 @@ if (isIOS() && !isEmStandaloneMode() && !sessionStorage.getItem(BANNER_KEY)) {
 // App instalado com sucesso
 window.addEventListener('appinstalled', () => {
   fecharBanner();
-  console.log('App instalado com sucesso!');
 });
 </script>
 </body>
