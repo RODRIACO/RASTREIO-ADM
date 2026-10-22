@@ -94,8 +94,6 @@
     .anexo-item .tirar{background:transparent;border:1px solid #c0392b;color:#c0392b;border-radius:3px;font-size:14px;line-height:1;padding:3px 8px;cursor:pointer;}
     .anexo-item .tirar:hover{background:#c0392b;color:#fff;}
     .anexo-vazio{font-size:12px;color:#666;font-style:italic;}
-    .anexo-form{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
-    .anexo-form input[type=text]{flex:1;min-width:220px;}
     .anexo-check{display:flex;align-items:center;gap:6px;font-size:12px;color:#aaa;white-space:nowrap;cursor:pointer;}
     .anexo-aviso{margin-top:8px;font-size:11px;color:#777;}
     .pdf-atual a{color:#e8620a;font-weight:700;}
@@ -342,17 +340,15 @@
   <div class="grid">
     <div class="field"><label>Número da NF</label><input type="text" id="n_nota_fiscal" placeholder="Ex: 50416"/></div>
   </div>
-  <div class="section-label">Anexos</div>
+  <div class="section-label">Documento</div>
   <div class="anexo-lista" id="n_anexoLista"></div>
-  <div class="anexo-form">
-    <input type="text" id="n_anexoNome" maxlength="40" placeholder="Nome do anexo: NF39027 ou CRM39027"/>
-  </div>
   <div class="upload-area" id="n_uploadArea">
     <input type="file" id="n_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'n')"/>
     <div class="upload-icon">📄</div>
     <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
     <div class="upload-name" id="n_uploadName"></div>
   </div>
+  <div class="anexo-aviso">O nome do arquivo vira o nome do documento e precisa começar com NF ou CRM — ex.: NF39027.pdf, CRM39027.pdf.</div>
 
   <div class="section-label">Observações</div>
   <div class="field"><textarea id="n_observacao" placeholder="Observações adicionais..."></textarea></div>
@@ -412,18 +408,15 @@
     <div class="grid">
       <div class="field"><label>Número da NF</label><input type="text" id="e_nota_fiscal"/></div>
     </div>
-    <div class="section-label">Anexos</div>
+    <div class="section-label">Documento</div>
     <div class="anexo-lista" id="e_anexoLista"></div>
-    <div class="anexo-form">
-      <input type="text" id="e_anexoNome" maxlength="40" placeholder="Nome do anexo: NF39027 ou CRM39027"/>
-    </div>
     <div class="upload-area" id="e_uploadArea">
       <input type="file" id="e_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'e')"/>
       <div class="upload-icon">📄</div>
       <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
       <div class="upload-name" id="e_uploadName"></div>
     </div>
-    <div class="anexo-aviso">É um documento por pedido: enviar outro substitui o atual. Gravado na hora, sem esperar o botão Salvar.</div>
+    <div class="anexo-aviso">O nome do arquivo vira o nome do documento e precisa começar com NF ou CRM — ex.: NF39027.pdf. É um por pedido: enviar outro substitui o atual, na hora, sem esperar o botão Salvar.</div>
 
     <div class="section-label">Observações</div>
     <div class="field"><textarea id="e_observacao"></textarea></div>
@@ -683,14 +676,19 @@ function dadosDoForm(prefix) {
 let anexosFila = [];      // formulário Novo: no máximo um {nome, file}
 let anexosEdicao = [];    // formulário Editar: linhas da tabela
 
-function nomeDeAnexo(prefix) {
-  const bruto = $(prefix + '_anexoNome').value.trim().replace(/\s+/g, ' ');
-  if (!bruto) { showToast('Dê um nome ao anexo: NF39027 ou CRM39027', 'err'); return null; }
+// O nome do documento é o nome do próprio arquivo, sem a extensão. O "(1)"
+// que o navegador acrescenta em download repetido não deve virar nome.
+function nomeDeAnexo(file) {
+  const bruto = file.name
+    .replace(/\.pdf$/i, '')
+    .replace(/\s*\(\d+\)$/, '')
+    .trim().replace(/\s+/g, ' ');
   if (!/^(nf|crm)/i.test(bruto)) {
-    showToast('O nome precisa começar com NF ou CRM', 'err');
+    showToast('O arquivo precisa se chamar NF… ou CRM… — ex.: NF39027.pdf', 'err');
     return null;
   }
-  return bruto.replace(/^(nf|crm)/i, m => m.toUpperCase());
+  // o banco aceita até 40 caracteres
+  return bruto.replace(/^(nf|crm)/i, m => m.toUpperCase()).slice(0, 40);
 }
 
 function selecionarPDF(file, prefix) {
@@ -699,7 +697,7 @@ function selecionarPDF(file, prefix) {
   if (!ehPDF) { limparPDF(prefix); return showToast('Selecione um arquivo PDF', 'err'); }
   if (file.size > PDF_MAX) { limparPDF(prefix); return showToast('PDF maior que 10 MB', 'err'); }
 
-  const nome = nomeDeAnexo(prefix);
+  const nome = nomeDeAnexo(file);
   if (!nome) { limparPDF(prefix); return; }
 
   if (prefix === 'n') {
@@ -717,7 +715,6 @@ function selecionarPDF(file, prefix) {
 }
 
 function limparCamposAnexo(prefix) {
-  $(prefix + '_anexoNome').value = '';
   limparPDF(prefix);
 }
 
