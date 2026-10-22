@@ -86,6 +86,18 @@
     .upload-text span{color:#e8620a;font-weight:700;}
     .upload-name{margin-top:8px;font-size:12px;color:#e8620a;font-weight:700;display:none;overflow-wrap:anywhere;}
     .pdf-atual{display:none;margin-top:8px;font-size:12px;color:#777;}
+    .anexo-lista{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+    .anexo-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #2a2a2a;border-radius:4px;background:#161616;}
+    .anexo-item .nome{flex:1;font-size:13px;font-weight:700;color:#eee;overflow-wrap:anywhere;}
+    .anexo-item .abrir{font-size:12px;color:#e8620a;text-decoration:none;font-weight:700;}
+    .anexo-item .marca{font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:2px;background:#333;color:#aaa;}
+    .anexo-item .tirar{background:transparent;border:1px solid #c0392b;color:#c0392b;border-radius:3px;font-size:14px;line-height:1;padding:3px 8px;cursor:pointer;}
+    .anexo-item .tirar:hover{background:#c0392b;color:#fff;}
+    .anexo-vazio{font-size:12px;color:#666;font-style:italic;}
+    .anexo-form{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+    .anexo-form input[type=text]{flex:1;min-width:220px;}
+    .anexo-check{display:flex;align-items:center;gap:6px;font-size:12px;color:#aaa;white-space:nowrap;cursor:pointer;}
+    .anexo-aviso{margin-top:8px;font-size:11px;color:#777;}
     .pdf-atual a{color:#e8620a;font-weight:700;}
 
     .btn-salvar{
@@ -330,6 +342,12 @@
   <div class="grid">
     <div class="field"><label>Número da NF</label><input type="text" id="n_nota_fiscal" placeholder="Ex: 50416"/></div>
   </div>
+  <div class="section-label">Anexos</div>
+  <div class="anexo-lista" id="n_anexoLista"></div>
+  <div class="anexo-form">
+    <input type="text" id="n_anexoNome" maxlength="40" placeholder="Nome do anexo: NF39027 ou CRM39027"/>
+    <label class="anexo-check"><input type="checkbox" id="n_anexoInterno"/> não mostrar ao cliente</label>
+  </div>
   <div class="upload-area" id="n_uploadArea">
     <input type="file" id="n_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'n')"/>
     <div class="upload-icon">📄</div>
@@ -395,13 +413,19 @@
     <div class="grid">
       <div class="field"><label>Número da NF</label><input type="text" id="e_nota_fiscal"/></div>
     </div>
+    <div class="section-label">Anexos</div>
+    <div class="anexo-lista" id="e_anexoLista"></div>
+    <div class="anexo-form">
+      <input type="text" id="e_anexoNome" maxlength="40" placeholder="Nome do anexo: NF39027 ou CRM39027"/>
+      <label class="anexo-check"><input type="checkbox" id="e_anexoInterno"/> não mostrar ao cliente</label>
+    </div>
     <div class="upload-area" id="e_uploadArea">
       <input type="file" id="e_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'e')"/>
       <div class="upload-icon">📄</div>
-      <div class="upload-text">Substituir PDF — <span>clique para selecionar</span></div>
+      <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
       <div class="upload-name" id="e_uploadName"></div>
     </div>
-    <div class="pdf-atual" id="e_pdfAtual">PDF anexado hoje: <a id="e_pdfAtualLink" target="_blank" rel="noopener">abrir</a></div>
+    <div class="anexo-aviso">Aqui o anexo é gravado na hora, sem esperar o botão Salvar.</div>
 
     <div class="section-label">Observações</div>
     <div class="field"><textarea id="e_observacao"></textarea></div>
@@ -503,6 +527,7 @@ const CONTA_ADM = 'comercial5@mrinox.com.br';
 
 const TABELA  = 'rastreio_pedidos';
 const BUCKET  = 'rastreio-nf';
+const TABELA_ANEXOS = 'rastreio_anexos';
 const PDF_MAX = 10 * 1024 * 1024; // mesmo limite do bucket
 
 // "col" é a coluna de data no banco. O status não é gravado: o banco calcula
@@ -518,7 +543,6 @@ const CAMPOS_TEXTO = ['numero','cliente','descricao','localizacao','recebido_por
                       'transportadora','motorista','telefone','nota_fiscal','observacao','rota'];
 
 let sb = null;
-let pdfArquivo = {n:null, e:null};
 let pedidoEdicao = null;      // a linha inteira que está aberta na edição
 let todosOsPedidos = [];
 
@@ -650,23 +674,144 @@ function dadosDoForm(prefix) {
   return d;
 }
 
-// ── PDF ───────────────────────────────────────────────
+// ── ANEXOS ────────────────────────────────────────────
+// Um pedido tem vários: NF, CRM, mais de uma NF. O nome digitado é o que
+// aparece no botão da tela do cliente, por isso o padrão é obrigatório.
+//
+// No cadastro de um pedido novo os anexos ficam na fila e sobem depois que
+// o pedido existe (antes disso não há a quem ligá-los). Na edição, o pedido
+// já existe: anexar e remover valem na hora.
+let anexosFila = [];      // formulário Novo: [{nome, interno, file}]
+let anexosEdicao = [];    // formulário Editar: linhas da tabela
+
+function nomeDeAnexo(prefix) {
+  const bruto = $(prefix + '_anexoNome').value.trim().replace(/\s+/g, ' ');
+  if (!bruto) { showToast('Dê um nome ao anexo: NF39027 ou CRM39027', 'err'); return null; }
+  if (!/^(nf|crm)/i.test(bruto)) {
+    showToast('O nome precisa começar com NF ou CRM', 'err');
+    return null;
+  }
+  return bruto.replace(/^(nf|crm)/i, m => m.toUpperCase());
+}
+
 function selecionarPDF(file, prefix) {
   if (!file) return;
   const ehPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
   if (!ehPDF) { limparPDF(prefix); return showToast('Selecione um arquivo PDF', 'err'); }
   if (file.size > PDF_MAX) { limparPDF(prefix); return showToast('PDF maior que 10 MB', 'err'); }
-  pdfArquivo[prefix] = file;
-  const nameEl = $(prefix + '_uploadName');
-  nameEl.textContent = '✓ ' + file.name;
-  nameEl.style.display = 'block';
-  const match = file.name.match(/(\d{4,})/);
-  const nfInput = $(prefix + '_nota_fiscal');
-  if (match && !nfInput.value) nfInput.value = match[1];
+
+  const nome = nomeDeAnexo(prefix);
+  if (!nome) { limparPDF(prefix); return; }
+  const interno = $(prefix + '_anexoInterno').checked;
+
+  if (prefix === 'n') {
+    anexosFila.push({nome, interno, file});
+    limparCamposAnexo('n');
+    renderAnexos('n');
+    showToast('📎 ' + nome + ' entra na fila; sobe ao salvar o pedido', 'ok');
+  } else {
+    anexarAgora(nome, interno, file);
+  }
+}
+
+function limparCamposAnexo(prefix) {
+  $(prefix + '_anexoNome').value = '';
+  $(prefix + '_anexoInterno').checked = false;
+  limparPDF(prefix);
+}
+
+// Edição: sobe o arquivo e grava a linha na hora.
+async function anexarAgora(nome, interno, file) {
+  if (!pedidoEdicao) { limparPDF('e'); return showToast('Carregue um pedido primeiro', 'err'); }
+  let caminho = '';
+  try {
+    caminho = await enviarPDF(file);
+    const { error } = await sb.from(TABELA_ANEXOS)
+      .insert({pedido_id: pedidoEdicao.id, nome, arquivo: caminho, publico: !interno});
+    if (error) throw error;
+    limparCamposAnexo('e');
+    await carregarAnexos(pedidoEdicao.id);
+    showToast('📎 ' + nome + ' anexado!', 'ok');
+  } catch (e) {
+    await apagarPDF(caminho);
+    limparPDF('e');
+    showToast('❌ ' + erroMsg(e), 'err');
+  }
+}
+
+async function carregarAnexos(pedidoId) {
+  const { data, error } = await sb.from(TABELA_ANEXOS)
+    .select('*').eq('pedido_id', pedidoId).order('criado_em');
+  anexosEdicao = error ? [] : data;
+  renderAnexos('e');
+}
+
+function linkDeAnexo(a) {
+  if (a.arquivo) return sb.storage.from(BUCKET).getPublicUrl(a.arquivo).data.publicUrl;
+  if (a.link && /^https:\/\//i.test(a.link.trim())) return a.link.trim();
+  return '';
+}
+
+function renderAnexos(prefix) {
+  const alvo = $(prefix + '_anexoLista');
+  const lista = prefix === 'n' ? anexosFila : anexosEdicao;
+  alvo.innerHTML = '';
+  if (!lista.length) {
+    alvo.appendChild(el('div', 'anexo-vazio', 'Nenhum anexo.'));
+    return;
+  }
+  lista.forEach((a, i) => {
+    const item = el('div', 'anexo-item');
+    item.appendChild(el('span', 'nome', a.nome));
+    const interno = prefix === 'n' ? a.interno : !a.publico;
+    if (interno) item.appendChild(el('span', 'marca', 'interno'));
+    if (prefix === 'n') {
+      item.appendChild(el('span', 'marca', 'na fila'));
+    } else {
+      const url = linkDeAnexo(a);
+      if (url) {
+        const link = el('a', 'abrir', 'abrir');
+        link.href = url; link.target = '_blank'; link.rel = 'noopener';
+        item.appendChild(link);
+      }
+    }
+    const tirar = el('button', 'tirar', '✕');
+    tirar.title = 'Remover anexo';
+    tirar.onclick = () => prefix === 'n' ? tirarDaFila(i) : removerAnexo(a);
+    item.appendChild(tirar);
+    alvo.appendChild(item);
+  });
+}
+
+function tirarDaFila(i) {
+  anexosFila.splice(i, 1);
+  renderAnexos('n');
+}
+
+async function removerAnexo(a) {
+  if (!confirm(`Remover o anexo ${a.nome}?`)) return;
+  try {
+    const { error } = await sb.from(TABELA_ANEXOS).delete().eq('id', a.id);
+    if (error) throw error;
+    await apagarPDF(a.arquivo);
+    await carregarAnexos(a.pedido_id);
+    showToast('🗑 Anexo removido', 'ok');
+  } catch (e) {
+    showToast('❌ ' + erroMsg(e), 'err');
+  }
+}
+
+// Cadastro novo: só agora o pedido tem id, então a fila sobe aqui.
+async function subirAnexosDaFila(pedidoId) {
+  for (const a of anexosFila) {
+    const caminho = await enviarPDF(a.file);
+    const { error } = await sb.from(TABELA_ANEXOS)
+      .insert({pedido_id: pedidoId, nome: a.nome, arquivo: caminho, publico: !a.interno});
+    if (error) { await apagarPDF(caminho); throw error; }
+  }
 }
 
 function limparPDF(prefix) {
-  pdfArquivo[prefix] = null;
   $(prefix + '_pdfInput').value = '';
   const nameEl = $(prefix + '_uploadName');
   nameEl.textContent = '';
@@ -702,12 +847,6 @@ async function apagarPDF(caminho) {
   if (!caminho) return;
   try { await sb.storage.from(BUCKET).remove([caminho]); } catch (e) {}
 }
-function linkNF(p) {
-  if (p.nf_arquivo) return sb.storage.from(BUCKET).getPublicUrl(p.nf_arquivo).data.publicUrl;
-  if (p.nf_link && /^https:\/\//i.test(p.nf_link.trim())) return p.nf_link.trim();
-  return '';
-}
-
 // ── Erros ─────────────────────────────────────────────
 function erroMsg(e) {
   const m = (e && e.message) || '';
@@ -748,13 +887,12 @@ async function salvarNovo() {
       if (!ok) return;
     }
 
-    if (pdfArquivo.n) caminho = await enviarPDF(pdfArquivo.n);
-    const registro = {...dados, ...etapas, nf_arquivo: caminho};
+    const registro = {...dados, ...etapas};
     // Lançado hoje: o relógio do banco marca a hora. Só vai data quando é retroativa.
     if (lanc && lanc !== hojeCampo()) registro.criado_em = instanteNoDia(lanc, new Date());
-    const { error } = await sb.from(TABELA).insert(registro);
+    const { data: criado, error } = await sb.from(TABELA).insert(registro).select('id');
     if (error) throw error;
-    caminho = '';
+    await subirAnexosDaFila(criado[0].id);
     showToast('✅ Pedido salvo com sucesso!','ok');
     limparNovo();
   } catch (e) {
@@ -1037,10 +1175,10 @@ function preencherFormEdicao(p) {
   mostrarEstadoCancelamento(p);
 
   // PDF escolhido para outro pedido não pode vir junto para este.
-  limparPDF('e');
-  const link = linkNF(p);
-  $('e_pdfAtual').style.display = link ? 'block' : 'none';
-  if (link) $('e_pdfAtualLink').href = link; else $('e_pdfAtualLink').removeAttribute('href');
+  limparCamposAnexo('e');
+  anexosEdicao = [];
+  renderAnexos('e');
+  carregarAnexos(p.id);
 }
 
 // ── SALVAR EDIÇÃO ─────────────────────────────────────
@@ -1055,12 +1193,9 @@ async function salvarEdicao() {
 
   const btn = $('e_btnSalvar');
   ocupado(btn, 'Salvando...');
-  const antigo = pedidoEdicao.nf_arquivo || '';
-  let novo = '';
   try {
-    if (pdfArquivo.e) novo = await enviarPDF(pdfArquivo.e);
+    // Anexo não passa por aqui: na edição ele já foi gravado na hora.
     const mudancas = {...dados, ...etapas};
-    if (novo) { mudancas.nf_arquivo = novo; mudancas.nf_link = ''; }
     // Só mexe no lançamento se o dia mudou; a hora original é preservada.
     if (lanc && lanc !== diaCampo(pedidoEdicao.criado_em))
       mudancas.criado_em = instanteNoDia(lanc, new Date(pedidoEdicao.criado_em));
@@ -1071,13 +1206,10 @@ async function salvarEdicao() {
     if (error) throw error;
     if (!data.length) throw new Error('Este pedido não existe mais — foi excluído por outra pessoa.');
 
-    if (novo) await apagarPDF(antigo);
-    novo = '';
     showToast('✅ Pedido atualizado!','ok');
     limparEdicao();
     await carregarTabela();
   } catch (e) {
-    await apagarPDF(novo);
     showToast('❌ ' + erroMsg(e),'err');
   } finally {
     btn.disabled = false; btn.innerHTML = '💾 Salvar Alterações';
@@ -1090,15 +1222,18 @@ function limparNovo() {
   $('n_previsao').value = '';
   $('n_embarque_previsto').value = '';
   $('n_lancamento').value = hojeCampo();
-  limparPDF('n');
+  anexosFila = [];
+  limparCamposAnexo('n');
+  renderAnexos('n');
   montarStatusGrid('n_statusGrid', 'n', null);
 }
 
 function limparEdicao() {
   $('e_busca').value = '';
   $('e_form').style.display = 'none';
-  $('e_pdfAtual').style.display = 'none';
-  limparPDF('e');
+  limparCamposAnexo('e');
+  anexosEdicao = [];
+  renderAnexos('e');
   pedidoEdicao = null;
   document.querySelectorAll('#e_tabelaBody tr.selecionada').forEach(tr => tr.classList.remove('selecionada'));
 }
@@ -1189,9 +1324,16 @@ async function confirmarExclusao() {
   const btn = $('btnExcluir');
   ocupado(btn, 'Excluindo...');
   try {
+    // Os arquivos precisam ser listados ANTES: apagar o pedido leva as
+    // linhas dos anexos junto (cascade) e aí não há mais como saber quais
+    // PDFs ficaram sem dono no bucket.
+    const arquivos = anexosEdicao.map(a => a.arquivo).filter(Boolean);
     const { data, error } = await sb.from(TABELA).delete().eq('id', pedidoEdicao.id).select('nf_arquivo');
     if (error) throw error;
-    if (data.length) await apagarPDF(data[0].nf_arquivo);
+    if (data.length) {
+      await apagarPDF(data[0].nf_arquivo);
+      for (const arq of arquivos) await apagarPDF(arq);
+    }
     showToast(data.length ? '✅ Pedido excluído com sucesso!' : 'Este pedido já tinha sido excluído', data.length ? 'ok' : 'info');
     limparEdicao();
     await carregarTabela();
