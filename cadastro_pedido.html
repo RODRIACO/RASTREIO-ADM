@@ -346,7 +346,6 @@
   <div class="anexo-lista" id="n_anexoLista"></div>
   <div class="anexo-form">
     <input type="text" id="n_anexoNome" maxlength="40" placeholder="Nome do anexo: NF39027 ou CRM39027"/>
-    <label class="anexo-check"><input type="checkbox" id="n_anexoInterno"/> não mostrar ao cliente</label>
   </div>
   <div class="upload-area" id="n_uploadArea">
     <input type="file" id="n_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'n')"/>
@@ -417,7 +416,6 @@
     <div class="anexo-lista" id="e_anexoLista"></div>
     <div class="anexo-form">
       <input type="text" id="e_anexoNome" maxlength="40" placeholder="Nome do anexo: NF39027 ou CRM39027"/>
-      <label class="anexo-check"><input type="checkbox" id="e_anexoInterno"/> não mostrar ao cliente</label>
     </div>
     <div class="upload-area" id="e_uploadArea">
       <input type="file" id="e_pdfInput" accept=".pdf,application/pdf" onchange="selecionarPDF(this.files[0],'e')"/>
@@ -425,7 +423,7 @@
       <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
       <div class="upload-name" id="e_uploadName"></div>
     </div>
-    <div class="anexo-aviso">Aqui o anexo é gravado na hora, sem esperar o botão Salvar.</div>
+    <div class="anexo-aviso">É um documento por pedido: enviar outro substitui o atual. Gravado na hora, sem esperar o botão Salvar.</div>
 
     <div class="section-label">Observações</div>
     <div class="field"><textarea id="e_observacao"></textarea></div>
@@ -674,14 +672,15 @@ function dadosDoForm(prefix) {
   return d;
 }
 
-// ── ANEXOS ────────────────────────────────────────────
-// Um pedido tem vários: NF, CRM, mais de uma NF. O nome digitado é o que
-// aparece no botão da tela do cliente, por isso o padrão é obrigatório.
+// ── ANEXO ─────────────────────────────────────────────
+// É UM documento por pedido: o CRM enquanto a NF não sai, e a NF no lugar
+// dele depois. O nome digitado é o que aparece no botão da tela do
+// cliente, por isso o padrão NF/CRM é obrigatório.
 //
-// No cadastro de um pedido novo os anexos ficam na fila e sobem depois que
-// o pedido existe (antes disso não há a quem ligá-los). Na edição, o pedido
-// já existe: anexar e remover valem na hora.
-let anexosFila = [];      // formulário Novo: [{nome, interno, file}]
+// No cadastro de um pedido novo o anexo fica na fila e sobe depois que o
+// pedido existe (antes disso não há a quem ligá-lo). Na edição, o pedido
+// já existe: anexar, substituir e remover valem na hora.
+let anexosFila = [];      // formulário Novo: no máximo um {nome, file}
 let anexosEdicao = [];    // formulário Editar: linhas da tabela
 
 function nomeDeAnexo(prefix) {
@@ -702,36 +701,47 @@ function selecionarPDF(file, prefix) {
 
   const nome = nomeDeAnexo(prefix);
   if (!nome) { limparPDF(prefix); return; }
-  const interno = $(prefix + '_anexoInterno').checked;
 
   if (prefix === 'n') {
-    anexosFila.push({nome, interno, file});
+    anexosFila = [{nome, file}];   // um só: o novo toma o lugar do anterior
     limparCamposAnexo('n');
     renderAnexos('n');
     showToast('📎 ' + nome + ' entra na fila; sobe ao salvar o pedido', 'ok');
   } else {
-    anexarAgora(nome, interno, file);
+    const atual = anexosEdicao[0];
+    if (atual && !confirm(`Este pedido já tem ${atual.nome}.\n\nSubstituir por ${nome}?`)) {
+      return limparPDF('e');
+    }
+    anexarAgora(nome, file);
   }
 }
 
 function limparCamposAnexo(prefix) {
   $(prefix + '_anexoNome').value = '';
-  $(prefix + '_anexoInterno').checked = false;
   limparPDF(prefix);
 }
 
-// Edição: sobe o arquivo e grava a linha na hora.
-async function anexarAgora(nome, interno, file) {
+// Edição: sobe o arquivo, grava a linha e tira o documento anterior.
+// O novo entra primeiro: se algo falhar no meio, o pedido fica com o
+// documento antigo em vez de ficar sem nenhum.
+async function anexarAgora(nome, file) {
   if (!pedidoEdicao) { limparPDF('e'); return showToast('Carregue um pedido primeiro', 'err'); }
+  const anteriores = anexosEdicao.slice();
   let caminho = '';
   try {
     caminho = await enviarPDF(file);
     const { error } = await sb.from(TABELA_ANEXOS)
-      .insert({pedido_id: pedidoEdicao.id, nome, arquivo: caminho, publico: !interno});
+      .insert({pedido_id: pedidoEdicao.id, nome, arquivo: caminho, publico: true});
     if (error) throw error;
+
+    for (const velho of anteriores) {
+      const { error: e2 } = await sb.from(TABELA_ANEXOS).delete().eq('id', velho.id);
+      if (!e2) await apagarPDF(velho.arquivo);
+    }
+
     limparCamposAnexo('e');
     await carregarAnexos(pedidoEdicao.id);
-    showToast('📎 ' + nome + ' anexado!', 'ok');
+    showToast('📎 ' + nome + (anteriores.length ? ' substituiu o anterior!' : ' anexado!'), 'ok');
   } catch (e) {
     await apagarPDF(caminho);
     limparPDF('e');
@@ -757,14 +767,12 @@ function renderAnexos(prefix) {
   const lista = prefix === 'n' ? anexosFila : anexosEdicao;
   alvo.innerHTML = '';
   if (!lista.length) {
-    alvo.appendChild(el('div', 'anexo-vazio', 'Nenhum anexo.'));
+    alvo.appendChild(el('div', 'anexo-vazio', 'Nenhum documento anexado.'));
     return;
   }
   lista.forEach((a, i) => {
     const item = el('div', 'anexo-item');
     item.appendChild(el('span', 'nome', a.nome));
-    const interno = prefix === 'n' ? a.interno : !a.publico;
-    if (interno) item.appendChild(el('span', 'marca', 'interno'));
     if (prefix === 'n') {
       item.appendChild(el('span', 'marca', 'na fila'));
     } else {
@@ -776,7 +784,7 @@ function renderAnexos(prefix) {
       }
     }
     const tirar = el('button', 'tirar', '✕');
-    tirar.title = 'Remover anexo';
+    tirar.title = 'Remover documento';
     tirar.onclick = () => prefix === 'n' ? tirarDaFila(i) : removerAnexo(a);
     item.appendChild(tirar);
     alvo.appendChild(item);
@@ -789,7 +797,7 @@ function tirarDaFila(i) {
 }
 
 async function removerAnexo(a) {
-  if (!confirm(`Remover o anexo ${a.nome}?`)) return;
+  if (!confirm(`Remover o documento ${a.nome}?`)) return;
   try {
     const { error } = await sb.from(TABELA_ANEXOS).delete().eq('id', a.id);
     if (error) throw error;
@@ -806,7 +814,7 @@ async function subirAnexosDaFila(pedidoId) {
   for (const a of anexosFila) {
     const caminho = await enviarPDF(a.file);
     const { error } = await sb.from(TABELA_ANEXOS)
-      .insert({pedido_id: pedidoId, nome: a.nome, arquivo: caminho, publico: !a.interno});
+      .insert({pedido_id: pedidoId, nome: a.nome, arquivo: caminho, publico: true});
     if (error) { await apagarPDF(caminho); throw error; }
   }
 }
