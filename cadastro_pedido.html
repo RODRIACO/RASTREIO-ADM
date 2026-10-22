@@ -348,7 +348,7 @@
     <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
     <div class="upload-name" id="n_uploadName"></div>
   </div>
-  <div class="anexo-aviso">O nome do arquivo vira o nome do documento e precisa começar com NF ou CRM — ex.: NF39027.pdf, CRM39027.pdf.</div>
+  <div class="anexo-aviso">O nome do arquivo vira o nome do documento, e é ele que o cliente vê no botão — ex.: NF39027.pdf vira NF39027.</div>
 
   <div class="section-label">Observações</div>
   <div class="field"><textarea id="n_observacao" placeholder="Observações adicionais..."></textarea></div>
@@ -416,7 +416,7 @@
       <div class="upload-text">Arraste o PDF ou <span>clique para selecionar</span></div>
       <div class="upload-name" id="e_uploadName"></div>
     </div>
-    <div class="anexo-aviso">O nome do arquivo vira o nome do documento e precisa começar com NF ou CRM — ex.: NF39027.pdf. É um por pedido: enviar outro substitui o atual, na hora, sem esperar o botão Salvar.</div>
+    <div class="anexo-aviso">O nome do arquivo vira o nome do documento, e é ele que o cliente vê no botão. É um por pedido: enviar outro substitui o atual, na hora, sem esperar o botão Salvar.</div>
 
     <div class="section-label">Observações</div>
     <div class="field"><textarea id="e_observacao"></textarea></div>
@@ -678,17 +678,13 @@ let anexosEdicao = [];    // formulário Editar: linhas da tabela
 
 // O nome do documento é o nome do próprio arquivo, sem a extensão. O "(1)"
 // que o navegador acrescenta em download repetido não deve virar nome.
+// Qualquer nome serve; só precisa sobrar alguma coisa e caber no banco.
 function nomeDeAnexo(file) {
   const bruto = file.name
     .replace(/\.pdf$/i, '')
     .replace(/\s*\(\d+\)$/, '')
     .trim().replace(/\s+/g, ' ');
-  if (!/^(nf|crm)/i.test(bruto)) {
-    showToast('O arquivo precisa se chamar NF… ou CRM… — ex.: NF39027.pdf', 'err');
-    return null;
-  }
-  // o banco aceita até 40 caracteres
-  return bruto.replace(/^(nf|crm)/i, m => m.toUpperCase()).slice(0, 40);
+  return (bruto || 'Documento').slice(0, 40);
 }
 
 function selecionarPDF(file, prefix) {
