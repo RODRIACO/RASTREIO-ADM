@@ -336,10 +336,6 @@
     <div class="field"><label>Telefone</label><input type="text" id="n_telefone" placeholder="Ex: 41 3954-1528"/></div>
   </div>
 
-  <div class="section-label">Nota Fiscal</div>
-  <div class="grid">
-    <div class="field"><label>Número da NF</label><input type="text" id="n_nota_fiscal" placeholder="Ex: 50416"/></div>
-  </div>
   <div class="section-label">Documento</div>
   <div class="anexo-lista" id="n_anexoLista"></div>
   <div class="upload-area" id="n_uploadArea">
@@ -404,10 +400,6 @@
       <div class="field"><label>Telefone</label><input type="text" id="e_telefone"/></div>
     </div>
 
-    <div class="section-label">Nota Fiscal</div>
-    <div class="grid">
-      <div class="field"><label>Número da NF</label><input type="text" id="e_nota_fiscal"/></div>
-    </div>
     <div class="section-label">Documento</div>
     <div class="anexo-lista" id="e_anexoLista"></div>
     <div class="upload-area" id="e_uploadArea">
@@ -531,7 +523,7 @@ const ETAPAS = [
   {key:'entregue', col:'entregue_em', icon:'✅', nome:'Entregue'},
 ];
 const CAMPOS_TEXTO = ['numero','cliente','descricao','localizacao','recebido_por',
-                      'transportadora','motorista','telefone','nota_fiscal','observacao','rota'];
+                      'transportadora','motorista','telefone','observacao','rota'];
 
 let sb = null;
 let pedidoEdicao = null;      // a linha inteira que está aberta na edição
@@ -734,6 +726,7 @@ async function anexarAgora(nome, file) {
 
     limparCamposAnexo('e');
     await carregarAnexos(pedidoEdicao.id);
+    await atualizarColunaNF();
     showToast('📎 ' + nome + (anteriores.length ? ' substituiu o anterior!' : ' anexado!'), 'ok');
   } catch (e) {
     await apagarPDF(caminho);
@@ -796,7 +789,8 @@ async function removerAnexo(a) {
     if (error) throw error;
     await apagarPDF(a.arquivo);
     await carregarAnexos(a.pedido_id);
-    showToast('🗑 Anexo removido', 'ok');
+    await atualizarColunaNF();
+    showToast('🗑 Documento removido', 'ok');
   } catch (e) {
     showToast('❌ ' + erroMsg(e), 'err');
   }
@@ -918,9 +912,30 @@ async function buscarTodos() {
   return tudo;
 }
 
+// Nome do documento de cada pedido, para a coluna NF da tabela. Os anexos
+// moram em outra tabela, então vêm numa consulta à parte e são casados
+// pelo id do pedido.
+let nomePorPedido = {};
+
+async function carregarNomesDeAnexos() {
+  const { data, error } = await sb.from(TABELA_ANEXOS).select('pedido_id,nome,criado_em').order('criado_em');
+  nomePorPedido = {};
+  if (!error) data.forEach(a => { nomePorPedido[a.pedido_id] = a.nome; });
+}
+
+const anexoDe = p => nomePorPedido[p.id] || '';
+
+// Anexar, substituir ou remover muda a coluna NF da tabela que está na
+// tela — sem isso ela só se corrigiria no próximo carregamento.
+async function atualizarColunaNF() {
+  await carregarNomesDeAnexos();
+  if ($('e_tabelaWrap').style.display !== 'none') filtrarTabela();
+}
+
 async function carregarTabela() {
   try {
     todosOsPedidos = await buscarTodos();
+    await carregarNomesDeAnexos();
     filtrarTabela();
     $('e_tabelaWrap').style.display = 'block';
     return true;
@@ -931,7 +946,8 @@ async function carregarTabela() {
 }
 
 function textoDeBusca(p) {
-  return norm([fmtDia(p.criado_em), p.numero, p.cliente, p.descricao, p.status, fmtData(p.previsao), p.nota_fiscal,
+  return norm([fmtDia(p.criado_em), p.numero, p.cliente, p.descricao, p.status, fmtData(p.previsao),
+               anexoDe(p), p.nota_fiscal,
                p.localizacao, p.recebido_por, p.transportadora, p.motorista, p.telefone, p.observacao,
                p.rota, fmtData(p.embarque_previsto)].join(' '));
 }
@@ -949,7 +965,7 @@ const COLUNAS = [
   {id:'previsao',   titulo:'Previsão',   data:true, valor:p => fmtData(p.previsao),   chave:p => Date.parse(p.previsao) || 0},
   {id:'embarque',   titulo:'Embarque',   data:true, valor:p => fmtData(p.embarque_previsto), chave:p => Date.parse(p.embarque_previsto) || 0},
   {id:'rota',       titulo:'Rota',                  valor:p => p.rota || '',          chave:p => p.rota || ''},
-  {id:'nf',         titulo:'NF',                    valor:p => p.nota_fiscal || '',   chave:p => p.nota_fiscal || ''},
+  {id:'nf',         titulo:'NF',                    valor:p => anexoDe(p),            chave:p => anexoDe(p)},
 ];
 let filtrosCol = {};    // id da coluna -> Set dos valores que ficam à mostra
 let ordenacao  = null;  // {col, dir}; null = ordem de lançamento, mais novo primeiro
@@ -1090,7 +1106,10 @@ async function carregarPedido() {
   if (!busca) return;
 
   const b = norm(busca);
-  const exatos = todosOsPedidos.filter(p => norm(p.numero) === b || norm(p.nota_fiscal) === b);
+  // acha pelo número do pedido, pelo nome do documento, ou pela NF dos
+  // registros antigos, que ainda guardam esse número
+  const exatos = todosOsPedidos.filter(p =>
+    norm(p.numero) === b || norm(anexoDe(p)) === b || norm(p.nota_fiscal) === b);
   if (exatos.length === 1) return selecionarPedido(exatos[0].id);
   if (exatos.length > 1) return showToast(`${exatos.length} entregas com esse número — escolha na tabela`,'info');
   showToast('Pedido não encontrado — veja os resultados na tabela','info');
@@ -1137,7 +1156,7 @@ function renderTabela(rows) {
     tr.appendChild(el('td', '', fmtData(p.previsao)));
     tr.appendChild(el('td', '', fmtData(p.embarque_previsto)));
     tr.appendChild(el('td', '', p.rota));
-    tr.appendChild(el('td', '', p.nota_fiscal));
+    tr.appendChild(el('td', '', anexoDe(p)));
     const tdBtn = el('td');
     tdBtn.appendChild(el('button', 'btn-editar-linha', '✏️ Editar'));
     tr.appendChild(tdBtn);
