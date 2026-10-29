@@ -309,7 +309,7 @@
     <div class="field"><label>Cliente *</label><input type="text" id="n_cliente" placeholder="Ex: SDX ORIGEM"/></div>
   </div>
   <div class="grid" style="margin-top:11px;">
-    <div class="field"><label>Descrição</label><input type="text" id="n_descricao" placeholder="Ex: BALCÕES"/></div>
+    <div class="field"><label>CRM</label><input type="text" id="n_descricao" placeholder="Ex: 38858"/></div>
     <div class="field"><label>Data de Lançamento</label><input type="date" id="n_lancamento"/></div>
   </div>
 
@@ -373,7 +373,7 @@
       <div class="field"><label>Cliente</label><input type="text" id="e_cliente"/></div>
     </div>
     <div class="grid" style="margin-top:11px;">
-      <div class="field"><label>Descrição</label><input type="text" id="e_descricao"/></div>
+      <div class="field"><label>CRM</label><input type="text" id="e_descricao"/></div>
       <div class="field"><label>Data de Lançamento</label><input type="date" id="e_lancamento"/></div>
     </div>
 
@@ -531,6 +531,10 @@ let todosOsPedidos = [];
 
 const $ = id => document.getElementById(id);
 const p2 = n => String(n).padStart(2, '0');
+// O campo guarda a CRM, e em muitos cadastros o prefixo veio escrito junto
+// ("CRM: 38858"). A coluna já se chama CRM, então na tela o prefixo sai.
+// O que está gravado continua igual - o campo de edição mostra o texto cru.
+const soCRM = v => v == null ? '' : String(v).replace(/^\s*CRM\s*[:\-–]?\s*/i, '').trim();
 const norm = s => String(s == null ? '' : s).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 function el(tag, cls, txt){
   const e = document.createElement(tag);
@@ -960,7 +964,7 @@ const COLUNAS = [
   {id:'lancamento', titulo:'Lançamento', data:true, valor:p => fmtDia(p.criado_em),   chave:p => Date.parse(p.criado_em) || 0},
   {id:'numero',     titulo:'Nº Pedido',             valor:p => p.numero || '',        chave:p => p.numero || ''},
   {id:'cliente',    titulo:'Cliente',               valor:p => p.cliente || '',       chave:p => p.cliente || ''},
-  {id:'descricao',  titulo:'Descrição',             valor:p => p.descricao || '',     chave:p => p.descricao || ''},
+  {id:'descricao',  titulo:'CRM',                   valor:p => soCRM(p.descricao),    chave:p => soCRM(p.descricao)},
   {id:'status',     titulo:'Status',                valor:p => p.status || '',        chave:p => ORDEM_STATUS.indexOf(p.status)},
   {id:'previsao',   titulo:'Previsão',   data:true, valor:p => fmtData(p.previsao),   chave:p => Date.parse(p.previsao) || 0},
   {id:'embarque',   titulo:'Embarque',   data:true, valor:p => fmtData(p.embarque_previsto), chave:p => Date.parse(p.embarque_previsto) || 0},
@@ -1149,7 +1153,7 @@ function renderTabela(rows) {
     tr.appendChild(el('td', '', fmtDia(p.criado_em)));
     tr.appendChild(el('td', '', p.numero));
     tr.appendChild(el('td', '', p.cliente));
-    tr.appendChild(el('td', '', p.descricao));
+    tr.appendChild(el('td', '', soCRM(p.descricao)));
     const tdSt = el('td', 'badge-cel');
     tdSt.appendChild(el('span', classeStatus(p.status), p.status || '—'));
     tr.appendChild(tdSt);
