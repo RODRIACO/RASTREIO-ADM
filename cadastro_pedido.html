@@ -1148,6 +1148,8 @@ function classeStatus(s) {
 // "Com NF" e "Sem NF" olham só o que ainda está em jogo: pedido entregue
 // ou cancelado sem documento não é trabalho para hoje. O entregue sem
 // documento tem cartão próprio, para a pendência não sumir de vista.
+// Somando com e sem NF, entregue com e sem NF e os cancelados, chega-se
+// ao total: todo pedido cai em um desses cinco e em nenhum outro.
 const estaCancelado = p => p.status === 'CANCELADO';
 const emAberto      = p => p.status !== 'CANCELADO' && p.status !== 'ENTREGUE';
 const daquiADias = n => { const d = new Date(); d.setDate(d.getDate() + n); return diaCampo(d); };
@@ -1166,6 +1168,8 @@ const CARTOES = [
   {id:'semnf',      titulo:'Sem NF',             teste: p => emAberto(p) && anexoDe(p) === ''},
   {id:'entreguesemnf', titulo:'Entregue sem NF', cls:'proximo',
                     teste: p => p.status === 'ENTREGUE' && anexoDe(p) === ''},
+  {id:'entreguecomnf', titulo:'Entregue com NF',
+                    teste: p => p.status === 'ENTREGUE' && anexoDe(p) !== ''},
   {id:'proximos',   titulo:'Previsão em 5 dias', cls:'proximo',
                     teste: p => emAberto(p) && !!p.previsao && p.previsao >= janela.hoje && p.previsao <= janela.limite},
   {id:'atrasados',  titulo:'Atrasados',          cls:'atrasado',
