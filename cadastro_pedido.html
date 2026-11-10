@@ -329,7 +329,6 @@
   <div class="section-label">Entrega</div>
   <div class="grid">
     <div class="field"><label>Previsão de Entrega</label><input type="date" id="n_previsao"/></div>
-    <div class="field"><label>Localização Atual</label><input type="text" id="n_localizacao" placeholder="Ex: São Paulo"/></div>
     <div class="field"><label>Recebido Por</label><input type="text" id="n_recebido_por" placeholder="Ex: Natalia"/></div>
   </div>
 
@@ -393,7 +392,6 @@
     <div class="section-label">Entrega</div>
     <div class="grid">
       <div class="field"><label>Previsão de Entrega</label><input type="date" id="e_previsao"/></div>
-      <div class="field"><label>Localização Atual</label><input type="text" id="e_localizacao"/></div>
       <div class="field"><label>Recebido Por</label><input type="text" id="e_recebido_por"/></div>
     </div>
 
@@ -533,7 +531,7 @@ const ETAPAS = [
   {key:'transito', col:'transito_em', icon:'🚚', nome:'Saída em Rota'},
   {key:'entregue', col:'entregue_em', icon:'✅', nome:'Entregue'},
 ];
-const CAMPOS_TEXTO = ['numero','cliente','descricao','localizacao','recebido_por',
+const CAMPOS_TEXTO = ['numero','cliente','descricao','recebido_por',
                       'transportadora','motorista','telefone','observacao','rota'];
 
 let sb = null;
@@ -963,7 +961,7 @@ async function carregarTabela() {
 function textoDeBusca(p) {
   return norm([fmtDia(p.criado_em), p.numero, p.cliente, p.descricao, p.status, fmtData(p.previsao),
                anexoDe(p), p.nota_fiscal,
-               p.localizacao, p.recebido_por, p.transportadora, p.motorista, p.telefone, p.observacao,
+               p.recebido_por, p.transportadora, p.motorista, p.telefone, p.observacao,
                p.rota, fmtData(p.embarque_previsto)].join(' '));
 }
 
